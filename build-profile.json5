@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B39A1CFCDEA71AA817554B5B3ECD71507679DFF94866DE49254C4662BD4A1C1F45428300926A41F",
+          "profile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p12",
+          "storePassword": "0000001BCCA9528D005BD83E4E48445703537D03DA78F36E99592698406EA0FDF533DD937443AB704DCF15"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
