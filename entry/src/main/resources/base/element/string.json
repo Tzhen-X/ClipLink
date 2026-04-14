@@ -1,0 +1,124 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "SyncClipboard entry module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Entry ability for SyncClipboard"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "SyncClipboard"
+    },
+    {
+      "name": "internet_reason",
+      "value": "Sync clipboard content with server"
+    },
+    {
+      "name": "home_tab",
+      "value": "Home"
+    },
+    {
+      "name": "history_tab",
+      "value": "History"
+    },
+    {
+      "name": "settings_tab",
+      "value": "Settings"
+    },
+    {
+      "name": "current_clipboard",
+      "value": "Current Clipboard"
+    },
+    {
+      "name": "upload",
+      "value": "Upload"
+    },
+    {
+      "name": "download",
+      "value": "Download"
+    },
+    {
+      "name": "sync_status",
+      "value": "Sync Status"
+    },
+    {
+      "name": "idle",
+      "value": "Idle"
+    },
+    {
+      "name": "syncing",
+      "value": "Syncing..."
+    },
+    {
+      "name": "success",
+      "value": "Success"
+    },
+    {
+      "name": "error",
+      "value": "Error"
+    },
+    {
+      "name": "empty_clipboard",
+      "value": "Empty clipboard"
+    },
+    {
+      "name": "clipboard_history",
+      "value": "Clipboard History"
+    },
+    {
+      "name": "no_history",
+      "value": "No history items"
+    },
+    {
+      "name": "server_settings",
+      "value": "Server Settings"
+    },
+    {
+      "name": "server_url",
+      "value": "Server URL"
+    },
+    {
+      "name": "username",
+      "value": "Username"
+    },
+    {
+      "name": "password",
+      "value": "Password"
+    },
+    {
+      "name": "save",
+      "value": "Save"
+    },
+    {
+      "name": "app_settings",
+      "value": "App Settings"
+    },
+    {
+      "name": "polling_interval",
+      "value": "Polling Interval (seconds)"
+    },
+    {
+      "name": "theme",
+      "value": "Theme"
+    },
+    {
+      "name": "history_size",
+      "value": "Max History Size"
+    },
+    {
+      "name": "light_theme",
+      "value": "Light"
+    },
+    {
+      "name": "dark_theme",
+      "value": "Dark"
+    },
+    {
+      "name": "auto_theme",
+      "value": "Auto"
+    }
+  ]
+}

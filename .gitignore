@@ -1,0 +1,30 @@
+# HarmonyOS build output
+build/
+*.hap
+*.app
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Node modules (if using npm)
+node_modules/
+oh_modules/
+
+# Hvigor
+.hvigor/
+
+# Local config
+local.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
