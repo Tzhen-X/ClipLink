@@ -255,11 +255,12 @@ export default struct HomePage {
           .maxLines(6)
       }
       .width('90%')
+      .height(228)
       .margin({ bottom: 20 })
       .padding(16)
-      .backgroundColor(this.getPalette().cardBackground)
+      .backgroundColor(this.getPalette().pageSurface)
       .borderRadius(16)
-      .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+      .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
 
       if (this.latestHistoryItem) {
         Column() {
@@ -282,7 +283,7 @@ export default struct HomePage {
           if (this.latestHistoryItem.type === 'Image' && this.latestHistoryItem.previewPixelMap) {
             Image(this.latestHistoryItem.previewPixelMap)
               .width('100%')
-              .height(140)
+              .height(150)
               .objectFit(ImageFit.Contain)
               .borderRadius(12)
               .backgroundColor(this.getPalette().elevatedBackground)
@@ -291,6 +292,7 @@ export default struct HomePage {
               .fontSize(14)
               .fontColor(this.getPalette().textPrimary)
               .width('100%')
+              .height(150)
               .padding(12)
               .backgroundColor(this.getPalette().elevatedBackground)
               .borderRadius(12)
@@ -306,11 +308,12 @@ export default struct HomePage {
           }
         }
         .width('90%')
+        .height(228)
         .padding(16)
         .margin({ bottom: 20 })
-        .backgroundColor(this.getPalette().cardBackground)
+        .backgroundColor(this.getPalette().pageSurface)
         .borderRadius(16)
-        .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+        .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
       }
 
       Row({ space: 12 }) {
@@ -362,9 +365,9 @@ export default struct HomePage {
       }
       .width('90%')
       .padding(16)
-      .backgroundColor(this.getPalette().cardBackground)
+      .backgroundColor(this.getPalette().pageSurface)
       .borderRadius(16)
-      .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+      .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
 
       Blank()
     }

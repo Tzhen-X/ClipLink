@@ -188,9 +188,9 @@ export default struct SettingsPage {
         }
         .width('90%')
         .padding(16)
-        .backgroundColor(this.getPalette().cardBackground)
+        .backgroundColor(this.getPalette().pageSurface)
         .borderRadius(16)
-        .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+        .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
         .margin({ bottom: 20 })
 
         // App Settings Section
@@ -280,9 +280,9 @@ export default struct SettingsPage {
         }
         .width('90%')
         .padding(16)
-        .backgroundColor(this.getPalette().cardBackground)
+        .backgroundColor(this.getPalette().pageSurface)
         .borderRadius(16)
-        .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+        .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
         .margin({ bottom: 20 })
 
         Button('Save')

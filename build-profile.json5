@@ -7,22 +7,21 @@
         "material": {
           "certpath": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001B39A1CFCDEA71AA817554B5B3ECD71507679DFF94866DE49254C4662BD4A1C1F45428300926A41F",
+          "keyPassword": "0000001BA163F2BE4E5818DD1AA4C40F6D7F4FE893AAE9DB86CA9025F68FB377F99ABAF175FD19B9C576AF",
           "profile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p12",
-          "storePassword": "0000001BCCA9528D005BD83E4E48445703537D03DA78F36E99592698406EA0FDF533DD937443AB704DCF15"
+          "storePassword": "0000001BDE825839BAE01AC2E1AE47DB3C163F23D8F7CD96ACFA156078383952B3C653693AEAFBFD6D285A"
         }
       }
     ],
     "products": [
       {
         "name": "default",
-        "compileSdkVersion": 20,
         "signingConfig": "default",
-        "compatibleSdkVersion": 20,
-        "runtimeOS": "OpenHarmony",
-        "targetSdkVersion": 20
+        "compatibleSdkVersion": "6.0.0(20)",
+        "targetSdkVersion": "6.0.0(20)",
+        "runtimeOS": "HarmonyOS"
       }
     ],
     "buildModeSet": [

@@ -293,9 +293,9 @@ export default struct HistoryPage {
               }
               .width('100%')
               .padding(16)
-              .backgroundColor(this.getPalette().cardBackground)
+              .backgroundColor(this.getPalette().pageSurface)
               .borderRadius(16)
-              .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
+              .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
             }
             .onClick(() => this.handleItemClick(item))
           }, (item: HistoryRecordDto) => `${item.type}-${item.hash}`)
