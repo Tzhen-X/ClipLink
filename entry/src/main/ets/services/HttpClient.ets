@@ -141,6 +141,39 @@ export class HttpClient {
     });
   }
 
+  private requestArrayBuffer(path: string, method: http.RequestMethod): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const request = http.createHttp();
+      const options: http.HttpRequestOptions = {
+        method,
+        header: this.buildHeaders(''),
+        readTimeout: 30000,
+        connectTimeout: 30000,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER
+      };
+
+      request.request(`${this.baseUrl}${path}`, options, (err: BusinessError, data: http.HttpResponse) => {
+        request.destroy();
+
+        if (err) {
+          reject(new Error(`REQUEST_${err.code}`));
+          return;
+        }
+
+        if (data.responseCode < 200 || data.responseCode > 299) {
+          reject(new Error(`HTTP ${data.responseCode}`));
+          return;
+        }
+
+        if (data.result instanceof ArrayBuffer) {
+          resolve(data.result);
+          return;
+        }
+        reject(new Error('Unexpected binary response type'));
+      });
+    });
+  }
+
   /**
    * GET request
    */
@@ -152,6 +185,10 @@ export class HttpClient {
 
   async getText(path: string): Promise<string> {
     return await this.request(path, http.RequestMethod.GET, '', '');
+  }
+
+  async getArrayBuffer(path: string): Promise<ArrayBuffer> {
+    return await this.requestArrayBuffer(path, http.RequestMethod.GET);
   }
 
   /**

@@ -209,6 +209,10 @@ export class SyncClipboardService {
     return await this.httpClient.getText(`/api/history/${profileId}/data`);
   }
 
+  async downloadHistoryBinary(profileId: string): Promise<ArrayBuffer> {
+    return await this.httpClient.getArrayBuffer(`/api/history/${profileId}/data`);
+  }
+
   /**
    * Build query string from params
    */

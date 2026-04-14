@@ -1,6 +1,7 @@
 import { ConfigService } from '../services/ConfigService';
 import { AppConfig, ServerConfig } from '../types/ApiTypes';
 import { ConfigurationConstant } from '@kit.AbilityKit';
+import { ThemeUtil, ThemePalette } from '../utils/ThemeUtil';
 
 @Component
 export default struct SettingsPage {
@@ -18,12 +19,8 @@ export default struct SettingsPage {
 
   private configService: ConfigService = ConfigService.getInstance();
 
-  private isDarkTheme(): boolean {
-    return (
-      this.appTheme === 'dark' ||
-      (this.appTheme === 'auto' &&
-        this.systemColorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
-    );
+  private getPalette(): ThemePalette {
+    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
   }
 
   aboutToAppear() {
@@ -64,6 +61,27 @@ export default struct SettingsPage {
     }, 2000);
   }
 
+  private async handleThemeSelect(index: number): Promise<void> {
+    const selectedTheme = index === 0 ? 'light' : index === 1 ? 'dark' : 'auto';
+    this.theme = selectedTheme;
+    this.appTheme = selectedTheme;
+    await ThemeUtil.applyTheme(selectedTheme, this.systemColorMode);
+    try {
+      const currentConfig = this.configService.getConfig();
+      await this.configService.saveConfig({
+        server: currentConfig.server,
+        pollingInterval: currentConfig.pollingInterval,
+        theme: selectedTheme as 'light' | 'dark' | 'auto',
+        maxHistorySize: currentConfig.maxHistorySize
+      });
+      this.saveStatus = 'Theme updated';
+      this.resetSaveStatusLater();
+    } catch (error) {
+      console.error('[SettingsPage] handleThemeSelect error:', JSON.stringify(error));
+      this.saveStatus = 'Theme update failed';
+    }
+  }
+
   private async handleSave() {
     try {
       const config: AppConfig = {
@@ -79,6 +97,8 @@ export default struct SettingsPage {
       };
 
       await this.configService.saveConfig(config);
+      this.appTheme = config.theme;
+      await ThemeUtil.applyTheme(config.theme, this.systemColorMode);
       this.saveStatus = 'Saved successfully';
       this.resetSaveStatusLater();
     } catch (error) {
@@ -93,7 +113,7 @@ export default struct SettingsPage {
         Text('Settings')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.isDarkTheme() ? '#F5F5F5' : '#222222')
+          .fontColor(this.getPalette().textPrimary)
           .margin({ top: 20, bottom: 20 })
 
         // Server Settings Section
@@ -101,17 +121,23 @@ export default struct SettingsPage {
           Text('Server Settings')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPalette().textPrimary)
             .alignSelf(ItemAlign.Start)
             .margin({ bottom: 15 })
 
           Column() {
             Text('Server URL')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .alignSelf(ItemAlign.Start)
               .margin({ bottom: 5 })
             
             TextInput({ text: this.serverUrl })
               .width('100%')
+              .height(44)
+              .backgroundColor(this.getPalette().inputBackground)
+              .fontColor(this.getPalette().textPrimary)
+              .borderRadius(12)
               .onChange((value: string) => {
                 this.serverUrl = value;
               })
@@ -122,11 +148,16 @@ export default struct SettingsPage {
           Column() {
             Text('Username')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .alignSelf(ItemAlign.Start)
               .margin({ bottom: 5 })
             
             TextInput({ text: this.username })
               .width('100%')
+              .height(44)
+              .backgroundColor(this.getPalette().inputBackground)
+              .fontColor(this.getPalette().textPrimary)
+              .borderRadius(12)
               .onChange((value: string) => {
                 this.username = value;
               })
@@ -137,12 +168,17 @@ export default struct SettingsPage {
           Column() {
             Text('Password')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .alignSelf(ItemAlign.Start)
               .margin({ bottom: 5 })
             
             TextInput({ text: this.password })
               .width('100%')
               .type(InputType.Password)
+              .height(44)
+              .backgroundColor(this.getPalette().inputBackground)
+              .fontColor(this.getPalette().textPrimary)
+              .borderRadius(12)
               .onChange((value: string) => {
                 this.password = value;
               })
@@ -151,9 +187,10 @@ export default struct SettingsPage {
           .margin({ bottom: 15 })
         }
         .width('90%')
-        .padding(15)
-        .backgroundColor(this.isDarkTheme() ? '#1F1F1F' : '#FFFFFF')
-        .borderRadius(8)
+        .padding(16)
+        .backgroundColor(this.getPalette().cardBackground)
+        .borderRadius(16)
+        .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
         .margin({ bottom: 20 })
 
         // App Settings Section
@@ -161,12 +198,14 @@ export default struct SettingsPage {
           Text('App Settings')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
+            .fontColor(this.getPalette().textPrimary)
             .alignSelf(ItemAlign.Start)
             .margin({ bottom: 15 })
 
           Row() {
             Text('Polling Interval (seconds)')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .layoutWeight(1)
             
             Counter() {
@@ -185,11 +224,15 @@ export default struct SettingsPage {
             })
           }
           .width('100%')
+          .padding(12)
+          .backgroundColor(this.getPalette().elevatedBackground)
+          .borderRadius(12)
           .margin({ bottom: 15 })
 
           Row() {
             Text('Theme')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .layoutWeight(1)
             
             Select([
@@ -200,15 +243,19 @@ export default struct SettingsPage {
               .selected(this.theme === 'light' ? 0 : this.theme === 'dark' ? 1 : 2)
               .value(this.theme === 'light' ? 'Light' : this.theme === 'dark' ? 'Dark' : 'Auto')
               .onSelect((index: number) => {
-                this.theme = index === 0 ? 'light' : index === 1 ? 'dark' : 'auto';
+                void this.handleThemeSelect(index);
               })
           }
           .width('100%')
+          .padding(12)
+          .backgroundColor(this.getPalette().elevatedBackground)
+          .borderRadius(12)
           .margin({ bottom: 15 })
 
           Row() {
             Text('Max History Size')
               .fontSize(14)
+              .fontColor(this.getPalette().textSecondary)
               .layoutWeight(1)
             
             Counter() {
@@ -227,23 +274,32 @@ export default struct SettingsPage {
             })
           }
           .width('100%')
+          .padding(12)
+          .backgroundColor(this.getPalette().elevatedBackground)
+          .borderRadius(12)
         }
         .width('90%')
-        .padding(15)
-        .backgroundColor(this.isDarkTheme() ? '#1F1F1F' : '#FFFFFF')
-        .borderRadius(8)
+        .padding(16)
+        .backgroundColor(this.getPalette().cardBackground)
+        .borderRadius(16)
+        .shadow({ radius: 12, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 4 })
         .margin({ bottom: 20 })
 
         Button('Save')
           .fontSize(16)
-          .width(200)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(this.getPalette().buttonPrimaryText)
+          .width('90%')
+          .height(48)
+          .backgroundColor(this.getPalette().buttonPrimaryBackground)
+          .borderRadius(24)
           .onClick(() => this.handleSave())
           .margin({ bottom: 10 })
 
         if (this.saveStatus) {
           Text(this.saveStatus)
             .fontSize(14)
-            .fontColor(this.saveStatus.includes('failed') ? '#FF0000' : '#00AA00')
+            .fontColor(this.saveStatus.includes('failed') ? this.getPalette().danger : this.getPalette().success)
         }
       }
       .width('100%')
@@ -251,6 +307,6 @@ export default struct SettingsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(this.isDarkTheme() ? '#111111' : '#F5F5F5')
+    .backgroundColor(this.getPalette().pageBackground)
   }
 }

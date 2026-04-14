@@ -2,6 +2,7 @@ import HomePage from './HomePage';
 import HistoryPage from './HistoryPage';
 import SettingsPage from './SettingsPage';
 import { ConfigurationConstant } from '@kit.AbilityKit';
+import { ThemeUtil, ThemePalette } from '../utils/ThemeUtil';
 
 @Entry
 @Component
@@ -11,12 +12,8 @@ struct Index {
   @StorageLink('systemColorMode') systemColorMode: number =
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
 
-  private isDarkTheme(): boolean {
-    return (
-      this.appTheme === 'dark' ||
-      (this.appTheme === 'auto' &&
-        this.systemColorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
-    );
+  private getPalette(): ThemePalette {
+    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
   }
 
   @Builder TabBuilder(title: string, targetIndex: number) {
@@ -24,11 +21,17 @@ struct Index {
       Text(title)
         .fontSize(16)
         .fontWeight(this.currentTabIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
-        .fontColor(this.currentTabIndex === targetIndex ? '#007DFF' : this.isDarkTheme() ? '#CFCFCF' : '#666666')
+        .fontColor(
+          this.currentTabIndex === targetIndex
+            ? this.getPalette().accent
+            : this.getPalette().textSecondary
+        )
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
+    .backgroundColor(this.currentTabIndex === targetIndex ? this.getPalette().accentSoft : this.getPalette().cardBackground)
+    .borderRadius(16)
   }
 
   build() {
@@ -51,7 +54,8 @@ struct Index {
     .width('100%')
     .height('100%')
     .barPosition(BarPosition.End)
-    .backgroundColor(this.isDarkTheme() ? '#111111' : '#F5F5F5')
+    .backgroundColor(this.getPalette().pageBackground)
+    .barBackgroundColor(this.getPalette().cardBackground)
     .onChange((index: number) => {
       this.currentTabIndex = index;
     })
