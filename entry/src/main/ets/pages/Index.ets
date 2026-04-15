@@ -3,20 +3,36 @@ import HistoryPage from './HistoryPage';
 import SettingsPage from './SettingsPage';
 import { ConfigurationConstant } from '@kit.AbilityKit';
 import { ThemeUtil, ThemePalette } from '../utils/ThemeUtil';
-import { getBottomTabLayoutSpec, getMainTabSpecs, MainTabSpec } from '../utils/PageScaffoldUtil';
+import {
+  getBottomTabLayoutSpec,
+  getMainTabSpecs,
+  getSystemSafeAreaInsets,
+  MainTabSpec
+} from '../utils/PageScaffoldUtil';
 
 @Entry
 @Component
 struct Index {
   @State currentTabIndex: number = 0;
   @StorageLink('appTheme') appTheme: string = 'auto';
+  @StorageLink('preferPureBlackInDark') preferPureBlackInDark: boolean = false;
+  @StorageLink('safeAreaTop') safeAreaTop: number = 44;
+  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink('systemColorMode') systemColorMode: number =
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
   private readonly tabs: MainTabSpec[] = getMainTabSpecs();
   private readonly tabLayout = getBottomTabLayoutSpec();
 
   private getPalette(): ThemePalette {
-    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
+    return ThemeUtil.getPalette(
+      this.appTheme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      this.preferPureBlackInDark
+    );
+  }
+
+  private getSafeAreaInsets() {
+    return getSystemSafeAreaInsets(this.safeAreaTop, this.safeAreaBottom);
   }
 
   private getTabIcon(key: string): Resource {
@@ -51,37 +67,48 @@ struct Index {
         )
     }
     .width('100%')
-    .height(this.tabLayout.itemHeight)
+    .padding({ top: 6, bottom: 6 })
     .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
     .backgroundColor(Color.Transparent)
   }
 
   build() {
-    Tabs({ index: this.currentTabIndex }) {
-      ForEach(this.tabs, (tab: MainTabSpec, index: number) => {
-        TabContent() {
-          if (tab.key === 'home') {
-            HomePage()
-          } else if (tab.key === 'history') {
-            HistoryPage()
-          } else {
-            SettingsPage()
+    Column() {
+      Tabs({ index: this.currentTabIndex }) {
+        ForEach(this.tabs, (tab: MainTabSpec, index: number) => {
+          TabContent() {
+            if (tab.key === 'home') {
+              HomePage()
+            } else if (tab.key === 'history') {
+              HistoryPage()
+            } else {
+              SettingsPage()
+            }
           }
-        }
-        .tabBar(this.TabBuilder(tab, index))
-      }, (tab: MainTabSpec) => tab.key)
+          .tabBar(this.TabBuilder(tab, index))
+          .clip(false)
+        }, (tab: MainTabSpec) => tab.key)
+      }
+      .width('100%')
+      .layoutWeight(1)
+      .barPosition(BarPosition.End)
+      .barHeight(this.tabLayout.barHeight)
+      .barBackgroundColor(this.getPalette().pageSurface)
+      .backgroundBlurStyle(BlurStyle.NONE)
+      .barMode(BarMode.Fixed)
+      .scrollable(false)
+      .clip(false)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+      .onChange((index: number) => {
+        this.currentTabIndex = index;
+      })
+
     }
     .width('100%')
     .height('100%')
-    .barPosition(BarPosition.End)
-    .barHeight(this.tabLayout.barHeight)
+    .padding({ top: this.getSafeAreaInsets().top })
+    .clip(false)
     .backgroundColor(this.getPalette().pageBackground)
-    .barBackgroundColor(this.getPalette().pageSurface)
-    .backgroundBlurStyle(BlurStyle.NONE)
-    .barMode(BarMode.Fixed)
-    .scrollable(false)
-    .onChange((index: number) => {
-      this.currentTabIndex = index;
-    })
   }
 }

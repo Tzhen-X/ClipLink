@@ -31,6 +31,7 @@ export default struct HomePage {
   @State useHdsEffects: boolean = false;
   @State latestHistoryItem?: HomeHistoryPreviewItem = undefined;
   @StorageLink('appTheme') appTheme: string = 'auto';
+  @StorageLink('preferPureBlackInDark') preferPureBlackInDark: boolean = false;
   @StorageLink('systemColorMode') systemColorMode: number =
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
   @StorageLink('isPollingEnabled') isPollingEnabled: boolean = false;
@@ -45,7 +46,11 @@ export default struct HomePage {
   };
 
   private getPalette(): ThemePalette {
-    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
+    return ThemeUtil.getPalette(
+      this.appTheme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      this.preferPureBlackInDark
+    );
   }
 
   private getCardLightEffect(): VisualEffect {

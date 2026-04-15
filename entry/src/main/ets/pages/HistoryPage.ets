@@ -21,6 +21,7 @@ export default struct HistoryPage {
   @StorageLink('historyRefreshToken') @Watch('handleHistoryRefreshTokenChange')
   historyRefreshToken: number = 0;
   @StorageLink('appTheme') appTheme: string = 'auto';
+  @StorageLink('preferPureBlackInDark') preferPureBlackInDark: boolean = false;
   @StorageLink('systemColorMode') systemColorMode: number =
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
 
@@ -28,7 +29,11 @@ export default struct HistoryPage {
   private readonly listStyle = getHistoryListStyleSpec();
 
   private getPalette(): ThemePalette {
-    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
+    return ThemeUtil.getPalette(
+      this.appTheme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      this.preferPureBlackInDark
+    );
   }
 
   private showActionToast(message: string, duration: number = 1600): void {

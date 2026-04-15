@@ -11,6 +11,8 @@ export default class EntryAbility extends UIAbility {
     console.info('[EntryAbility] onCreate');
     AppStorage.setOrCreate('abilityContext', this.context);
     AppStorage.setOrCreate('historyRefreshToken', 0);
+    AppStorage.setOrCreate('safeAreaTop', 44);
+    AppStorage.setOrCreate('safeAreaBottom', 0);
     this.syncSystemTheme(this.context?.config?.colorMode);
     void ConfigService.getInstance()
       .loadConfig()
@@ -27,6 +29,7 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     console.info('[EntryAbility] onWindowStageCreate');
     AppStorage.setOrCreate('mainWindowStage', windowStage);
+    this.syncWindowAvoidAreas(windowStage);
     
     windowStage.loadContent('pages/Index', (err: BusinessError) => {
       if (err.code) {
@@ -63,5 +66,42 @@ export default class EntryAbility extends UIAbility {
       'systemColorMode',
       colorMode ?? ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET
     );
+  }
+
+  private syncWindowAvoidAreas(windowStage: window.WindowStage): void {
+    try {
+      const mainWindow = windowStage.getMainWindowSync();
+      const uiContext = mainWindow.getUIContext();
+
+      const updateInsets = (): void => {
+        const systemArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        const navigationArea = mainWindow.getWindowAvoidArea(
+          window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR
+        );
+        const topInset = uiContext.px2vp(systemArea.topRect.height);
+        const bottomInset = Math.max(
+          uiContext.px2vp(systemArea.bottomRect.height),
+          uiContext.px2vp(navigationArea.bottomRect.height)
+        );
+
+        AppStorage.setOrCreate('safeAreaTop', topInset > 0 ? topInset : 44);
+        AppStorage.setOrCreate(
+          'safeAreaBottom',
+          bottomInset > 0 ? bottomInset : 0
+        );
+      };
+
+      updateInsets();
+      mainWindow.on('avoidAreaChange', (avoidAreaOption) => {
+        if (
+          avoidAreaOption.type === window.AvoidAreaType.TYPE_SYSTEM ||
+          avoidAreaOption.type === window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR
+        ) {
+          updateInsets();
+        }
+      });
+    } catch (error) {
+      console.error('[EntryAbility] syncWindowAvoidAreas error:', JSON.stringify(error));
+    }
   }
 }

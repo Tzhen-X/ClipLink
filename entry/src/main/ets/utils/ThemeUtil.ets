@@ -1,5 +1,6 @@
 import window from '@ohos.window';
 import { ConfigurationConstant } from '@kit.AbilityKit';
+import { getResolvedThemeVariant, getWindowChromeSpec, ResolvedThemeVariant } from './PageScaffoldUtil';
 
 export interface ThemePalette {
   isDark: boolean;
@@ -26,17 +27,58 @@ export interface ThemePalette {
 }
 
 export class ThemeUtil {
-  static isDarkTheme(appTheme: string, systemColorMode: number): boolean {
-    return (
-      appTheme === 'dark' ||
-      (appTheme === 'auto' &&
-        systemColorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK)
-    );
+  static getResolvedThemeVariant(
+    appTheme: 'light' | 'dark' | 'auto',
+    systemColorMode: number,
+    preferPureBlackInDark: boolean
+  ): ResolvedThemeVariant {
+    return getResolvedThemeVariant(appTheme, systemColorMode, preferPureBlackInDark);
   }
 
-  static getPalette(appTheme: string, systemColorMode: number): ThemePalette {
-    const isDark = ThemeUtil.isDarkTheme(appTheme, systemColorMode);
-    return isDark
+  static isDarkTheme(
+    appTheme: 'light' | 'dark' | 'auto',
+    systemColorMode: number,
+    preferPureBlackInDark: boolean = false
+  ): boolean {
+    return ThemeUtil.getResolvedThemeVariant(appTheme, systemColorMode, preferPureBlackInDark) !== 'light';
+  }
+
+  static getPalette(
+    appTheme: 'light' | 'dark' | 'auto',
+    systemColorMode: number,
+    preferPureBlackInDark: boolean = false
+  ): ThemePalette {
+    const resolvedTheme = ThemeUtil.getResolvedThemeVariant(
+      appTheme,
+      systemColorMode,
+      preferPureBlackInDark
+    );
+
+    return resolvedTheme === 'black'
+      ? {
+          isDark: true,
+          pageBackground: '#000000',
+          pageSurface: '#000000',
+          cardBackground: '#050505',
+          elevatedBackground: '#0A0A0A',
+          inputBackground: '#101010',
+          borderColor: '#1F1F1F',
+          shadowColor: '#00000000',
+          textPrimary: '#FAFAFA',
+          textSecondary: '#CACACA',
+          textMuted: '#8A8A8A',
+          accent: '#6AA8FF',
+          accentSoft: '#102038',
+          buttonPrimaryBackground: '#6AA8FF',
+          buttonPrimaryText: '#05070B',
+          buttonSecondaryBackground: '#171717',
+          buttonSecondaryText: '#F3F3F3',
+          buttonDangerBackground: '#A63C4A',
+          buttonDangerText: '#FFF5F7',
+          success: '#58D07B',
+          danger: '#FF7D8A'
+        }
+      : resolvedTheme === 'dark'
         ? {
           isDark: true,
           pageBackground: '#0B1020',
@@ -81,38 +123,52 @@ export class ThemeUtil {
           buttonDangerBackground: '#E64D4F',
           buttonDangerText: '#FFFFFF',
           success: '#00A65A',
-          danger: '#D93838'
-        };
+           danger: '#D93838'
+         };
   }
 
-  static async applyTheme(appTheme: string, systemColorMode: number): Promise<void> {
+  static async applyTheme(
+    appTheme: 'light' | 'dark' | 'auto',
+    systemColorMode: number,
+    preferPureBlackInDark: boolean = false
+  ): Promise<void> {
     const windowStage = AppStorage.get<window.WindowStage>('mainWindowStage');
     if (!windowStage) {
       return;
     }
-    const palette = ThemeUtil.getPalette(appTheme, systemColorMode);
+    const palette = ThemeUtil.getPalette(appTheme, systemColorMode, preferPureBlackInDark);
     const systemBarContentColor = palette.isDark ? '#FFFFFF' : '#000000';
+    const windowChrome = getWindowChromeSpec();
     try {
       const mainWindow = windowStage.getMainWindowSync();
       mainWindow.setWindowBackgroundColor(palette.pageBackground);
-      await mainWindow.setWindowLayoutFullScreen(true);
-      await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
-      await mainWindow.setWindowSystemBarProperties({
-        statusBarColor: '#00000000',
-        navigationBarColor: '#00000000',
-        statusBarContentColor: systemBarContentColor,
-        navigationBarContentColor: systemBarContentColor
-      });
+      await mainWindow.setWindowLayoutFullScreen(windowChrome.usesFullscreenLayout);
+      if (windowChrome.managesNavigationBar) {
+        await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
+        await mainWindow.setWindowSystemBarProperties({
+          statusBarColor: windowChrome.usesTransparentSystemBars ? '#00000000' : palette.pageBackground,
+          navigationBarColor: windowChrome.usesTransparentSystemBars ? '#00000000' : palette.pageSurface,
+          statusBarContentColor: systemBarContentColor,
+          navigationBarContentColor: systemBarContentColor
+        });
+      } else {
+        await mainWindow.setWindowSystemBarEnable(['status']);
+        await mainWindow.setWindowSystemBarProperties({
+          statusBarColor: windowChrome.usesTransparentSystemBars ? '#00000000' : palette.pageBackground,
+          statusBarContentColor: systemBarContentColor
+        });
+      }
     } catch (error) {
       console.error('[ThemeUtil] applyTheme error:', JSON.stringify(error));
     }
   }
 
   static async applyStoredTheme(): Promise<void> {
-    const appTheme = AppStorage.get<string>('appTheme') ?? 'auto';
+    const appTheme = (AppStorage.get<string>('appTheme') ?? 'auto') as 'light' | 'dark' | 'auto';
     const systemColorMode =
       AppStorage.get<number>('systemColorMode') ??
       ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
-    await ThemeUtil.applyTheme(appTheme, systemColorMode);
+    const preferPureBlackInDark = AppStorage.get<boolean>('preferPureBlackInDark') ?? false;
+    await ThemeUtil.applyTheme(appTheme, systemColorMode, preferPureBlackInDark);
   }
 }

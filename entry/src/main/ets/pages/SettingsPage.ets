@@ -11,9 +11,11 @@ export default struct SettingsPage {
   @State password: string = '';
   @State pollingInterval: number = 5;
   @State theme: string = 'auto';
+  @State preferPureBlackInDark: boolean = false;
   @State historySize: number = 100;
   @State saveStatus: string = '';
   @StorageLink('appTheme') appTheme: string = 'auto';
+  @StorageLink('preferPureBlackInDark') storedPureBlackPreference: boolean = false;
   @StorageLink('systemColorMode') systemColorMode: number =
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
   private saveStatusTimer: number = -1;
@@ -22,7 +24,11 @@ export default struct SettingsPage {
   private configService: ConfigService = ConfigService.getInstance();
 
   private getPalette(): ThemePalette {
-    return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
+    return ThemeUtil.getPalette(
+      this.appTheme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      this.preferPureBlackInDark
+    );
   }
 
   aboutToAppear() {
@@ -45,6 +51,7 @@ export default struct SettingsPage {
     this.password = config.server.password || '';
     this.pollingInterval = config.pollingInterval;
     this.theme = config.theme;
+    this.preferPureBlackInDark = config.preferPureBlackInDark;
     this.historySize = config.maxHistorySize;
   }
 
@@ -67,19 +74,50 @@ export default struct SettingsPage {
     const selectedTheme = index === 0 ? 'light' : index === 1 ? 'dark' : 'auto';
     this.theme = selectedTheme;
     this.appTheme = selectedTheme;
-    await ThemeUtil.applyTheme(selectedTheme, this.systemColorMode);
+    await ThemeUtil.applyTheme(
+      selectedTheme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      this.preferPureBlackInDark
+    );
     try {
       const currentConfig = this.configService.getConfig();
       await this.configService.saveConfig({
         server: currentConfig.server,
         pollingInterval: currentConfig.pollingInterval,
         theme: selectedTheme as 'light' | 'dark' | 'auto',
+        preferPureBlackInDark: this.preferPureBlackInDark,
         maxHistorySize: currentConfig.maxHistorySize
       });
+      this.storedPureBlackPreference = this.preferPureBlackInDark;
       this.saveStatus = 'Theme updated';
       this.resetSaveStatusLater();
     } catch (error) {
       console.error('[SettingsPage] handleThemeSelect error:', JSON.stringify(error));
+      this.saveStatus = 'Theme update failed';
+    }
+  }
+
+  private async handlePureBlackToggle(isOn: boolean): Promise<void> {
+    this.preferPureBlackInDark = isOn;
+    this.storedPureBlackPreference = isOn;
+    await ThemeUtil.applyTheme(
+      this.theme as 'light' | 'dark' | 'auto',
+      this.systemColorMode,
+      isOn
+    );
+    try {
+      const currentConfig = this.configService.getConfig();
+      await this.configService.saveConfig({
+        server: currentConfig.server,
+        pollingInterval: currentConfig.pollingInterval,
+        theme: this.theme as 'light' | 'dark' | 'auto',
+        preferPureBlackInDark: isOn,
+        maxHistorySize: currentConfig.maxHistorySize
+      });
+      this.saveStatus = isOn ? 'Pure black enabled' : 'Pure black disabled';
+      this.resetSaveStatusLater();
+    } catch (error) {
+      console.error('[SettingsPage] handlePureBlackToggle error:', JSON.stringify(error));
       this.saveStatus = 'Theme update failed';
     }
   }
@@ -95,12 +133,14 @@ export default struct SettingsPage {
         },
         pollingInterval: this.pollingInterval,
         theme: this.theme as 'light' | 'dark' | 'auto',
+        preferPureBlackInDark: this.preferPureBlackInDark,
         maxHistorySize: this.historySize
       };
 
       await this.configService.saveConfig(config);
       this.appTheme = config.theme;
-      await ThemeUtil.applyTheme(config.theme, this.systemColorMode);
+      this.storedPureBlackPreference = config.preferPureBlackInDark;
+      await ThemeUtil.applyTheme(config.theme, this.systemColorMode, config.preferPureBlackInDark);
       this.saveStatus = 'Saved successfully';
       this.resetSaveStatusLater();
     } catch (error) {
@@ -308,6 +348,31 @@ export default struct SettingsPage {
                 .value(this.theme === 'light' ? 'Light' : this.theme === 'dark' ? 'Dark' : 'Auto')
                 .onSelect((index: number) => {
                   void this.handleThemeSelect(index);
+                })
+            }
+            .width('100%')
+            .padding({ top: 12, bottom: 12 })
+
+            Divider()
+              .strokeWidth(1)
+              .color(this.getPalette().borderColor)
+
+            Row() {
+              Column({ space: 2 }) {
+                Text('Use Pure Black in Dark')
+                  .fontSize($r('sys.float.Body_M'))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.getPalette().textPrimary)
+                Text('Affects Dark mode directly, and Auto mode whenever the system switches to dark.')
+                  .fontSize($r('sys.float.Caption_M'))
+                  .fontColor(this.getPalette().textSecondary)
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+
+              Toggle({ type: ToggleType.Switch, isOn: this.preferPureBlackInDark })
+                .onChange((isOn: boolean) => {
+                  void this.handlePureBlackToggle(isOn);
                 })
             }
             .width('100%')

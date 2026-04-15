@@ -1,3 +1,4 @@
+import { ConfigurationConstant } from '@kit.AbilityKit';
 import { describe, it, expect } from '@ohos/hypium';
 import {
   getActionButtonSpec,
@@ -8,7 +9,10 @@ import {
   getHistoryActionFeedback,
   getHistoryListStyleSpec,
   getMainTabSpecs,
+  getResolvedThemeVariant,
+  getSystemSafeAreaInsets,
   getSettingsSectionSpecs,
+  getWindowChromeSpec,
   getSyncStatusTone
 } from '../main/ets/utils/PageScaffoldUtil';
 
@@ -32,14 +36,18 @@ export default function testsuite() {
       const sections = getSettingsSectionSpecs();
       expect(sections.length).assertEqual(2);
       expect(sections[0].title).assertEqual('Server Connection');
-      expect(sections[1].rowCount).assertEqual(3);
+      expect(sections[1].rowCount).assertEqual(4);
     });
 
     it('keeps the bottom tabs lightweight like the official demo', 0, () => {
       const layout = getBottomTabLayoutSpec();
       expect(layout.barHeight).assertEqual(50);
-      expect(layout.itemHeight).assertEqual(52);
+      expect(layout.itemHeight).assertEqual(0);
       expect(layout.usesSelectedBackground).assertEqual(false);
+      expect(layout.usesSystemSafeAreaExpansion).assertEqual(false);
+      expect(layout.usesExternalBottomBar).assertEqual(false);
+      expect(layout.safeAreaFollowsBarSurface).assertEqual(true);
+      expect(layout.rootOwnsBottomSafeArea).assertEqual(true);
     });
 
     it('switches current clipboard into image preview mode when summary indicates an image', 0, () => {
@@ -86,6 +94,34 @@ export default function testsuite() {
       expect(copyOk.mode).assertEqual('toast');
       expect(copyOk.message).assertEqual('Copied to clipboard');
       expect(saveFail.message).assertEqual('Image download failed');
+    });
+
+    it('remembers whether dark appearance should use pure black', 0, () => {
+      const darkMode = ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+      const lightMode = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT;
+
+      expect(getResolvedThemeVariant('dark', lightMode, false)).assertEqual('dark');
+      expect(getResolvedThemeVariant('dark', lightMode, true)).assertEqual('black');
+      expect(getResolvedThemeVariant('auto', darkMode, false)).assertEqual('dark');
+      expect(getResolvedThemeVariant('auto', darkMode, true)).assertEqual('black');
+      expect(getResolvedThemeVariant('auto', lightMode, true)).assertEqual('light');
+    });
+
+    it('keeps top content and bottom tabs inside system safe areas', 0, () => {
+      const insets = getSystemSafeAreaInsets(24, 18);
+      const emptyInsets = getSystemSafeAreaInsets(-1, -5);
+
+      expect(insets.top).assertEqual(24);
+      expect(insets.bottom).assertEqual(18);
+      expect(emptyInsets.top).assertEqual(0);
+      expect(emptyInsets.bottom).assertEqual(0);
+    });
+
+    it('uses system-managed window chrome instead of fullscreen transparent bars', 0, () => {
+      const chrome = getWindowChromeSpec();
+      expect(chrome.usesFullscreenLayout).assertEqual(false);
+      expect(chrome.usesTransparentSystemBars).assertEqual(false);
+      expect(chrome.managesNavigationBar).assertEqual(false);
     });
   });
 }

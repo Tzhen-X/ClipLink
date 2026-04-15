@@ -1,6 +1,9 @@
+import { ConfigurationConstant } from '@kit.AbilityKit';
+
 export type MainTabKey = 'home' | 'history' | 'settings';
 export type StatusTone = 'neutral' | 'success' | 'danger';
 export type ClipboardPreviewMode = 'text' | 'image';
+export type ResolvedThemeVariant = 'light' | 'dark' | 'black';
 
 export interface MainTabSpec {
   key: MainTabKey;
@@ -20,6 +23,21 @@ export interface BottomTabLayoutSpec {
   iconSize: number;
   labelTopMargin: number;
   usesSelectedBackground: boolean;
+  usesSystemSafeAreaExpansion: boolean;
+  usesExternalBottomBar: boolean;
+  safeAreaFollowsBarSurface: boolean;
+  rootOwnsBottomSafeArea: boolean;
+}
+
+export interface SystemSafeAreaInsets {
+  top: number;
+  bottom: number;
+}
+
+export interface WindowChromeSpec {
+  usesFullscreenLayout: boolean;
+  usesTransparentSystemBars: boolean;
+  managesNavigationBar: boolean;
 }
 
 export interface HistoryListStyleSpec {
@@ -79,18 +97,57 @@ export function getSettingsSectionSpecs(): SettingsSectionSpec[] {
       key: 'preferences',
       title: 'Preferences',
       description: 'Theme, polling, and history retention stay in a standard settings group.',
-      rowCount: 3
+      rowCount: 4
     }
   ];
+}
+
+export function getResolvedThemeVariant(
+  appTheme: 'light' | 'dark' | 'auto',
+  systemColorMode: number,
+  preferPureBlackInDark: boolean
+): ResolvedThemeVariant {
+  if (appTheme === 'light') {
+    return 'light';
+  }
+
+  const followsDarkAppearance =
+    appTheme === 'dark' ||
+    systemColorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+
+  if (!followsDarkAppearance) {
+    return 'light';
+  }
+
+  return preferPureBlackInDark ? 'black' : 'dark';
 }
 
 export function getBottomTabLayoutSpec(): BottomTabLayoutSpec {
   return {
     barHeight: 50,
-    itemHeight: 52,
+    itemHeight: 0,
     iconSize: 24,
     labelTopMargin: 4,
-    usesSelectedBackground: false
+    usesSelectedBackground: false,
+    usesSystemSafeAreaExpansion: false,
+    usesExternalBottomBar: false,
+    safeAreaFollowsBarSurface: true,
+    rootOwnsBottomSafeArea: true
+  };
+}
+
+export function getSystemSafeAreaInsets(topInset: number, bottomInset: number): SystemSafeAreaInsets {
+  return {
+    top: topInset > 0 ? topInset : 0,
+    bottom: bottomInset > 0 ? bottomInset : 0
+  };
+}
+
+export function getWindowChromeSpec(): WindowChromeSpec {
+  return {
+    usesFullscreenLayout: false,
+    usesTransparentSystemBars: false,
+    managesNavigationBar: false
   };
 }
 

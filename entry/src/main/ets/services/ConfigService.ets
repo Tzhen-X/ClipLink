@@ -17,6 +17,7 @@ export class ConfigService {
   private readonly KEY_PASSWORD = 'password';
   private readonly KEY_POLLING_INTERVAL = 'polling_interval';
   private readonly KEY_THEME = 'theme';
+  private readonly KEY_PREFER_PURE_BLACK_IN_DARK = 'prefer_pure_black_in_dark';
   private readonly KEY_HISTORY_SIZE = 'history_size';
 
   private constructor() {
@@ -40,12 +41,14 @@ export class ConfigService {
       },
       pollingInterval: 5,
       theme: 'auto',
+      preferPureBlackInDark: false,
       maxHistorySize: 100
     };
   }
 
   private applyRuntimeConfig(config: AppConfig): void {
     AppStorage.setOrCreate('appTheme', config.theme);
+    AppStorage.setOrCreate('preferPureBlackInDark', config.preferPureBlackInDark);
     AppStorage.setOrCreate('maxHistorySize', config.maxHistorySize);
   }
 
@@ -88,6 +91,10 @@ export class ConfigService {
       const password = await this.preferences.get(this.KEY_PASSWORD, '') as string;
       const pollingInterval = await this.preferences.get(this.KEY_POLLING_INTERVAL, 5) as number;
       const theme = await this.preferences.get(this.KEY_THEME, 'auto') as string;
+      const preferPureBlackInDark = await this.preferences.get(
+        this.KEY_PREFER_PURE_BLACK_IN_DARK,
+        false
+      ) as boolean;
       const historySize = await this.preferences.get(this.KEY_HISTORY_SIZE, 100) as number;
 
       this.config = {
@@ -99,6 +106,7 @@ export class ConfigService {
         },
         pollingInterval: pollingInterval,
         theme: theme as 'light' | 'dark' | 'auto',
+        preferPureBlackInDark: preferPureBlackInDark,
         maxHistorySize: historySize
       };
       this.applyRuntimeConfig(this.config);
@@ -130,6 +138,7 @@ export class ConfigService {
       await this.preferences.put(this.KEY_PASSWORD, config.server.password || '');
       await this.preferences.put(this.KEY_POLLING_INTERVAL, config.pollingInterval);
       await this.preferences.put(this.KEY_THEME, config.theme);
+      await this.preferences.put(this.KEY_PREFER_PURE_BLACK_IN_DARK, config.preferPureBlackInDark);
       await this.preferences.put(this.KEY_HISTORY_SIZE, config.maxHistorySize);
 
       await this.preferences.flush();

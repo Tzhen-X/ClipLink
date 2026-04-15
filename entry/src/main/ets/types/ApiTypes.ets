@@ -78,5 +78,6 @@ export interface AppConfig {
   server: ServerConfig;
   pollingInterval: number;
   theme: 'light' | 'dark' | 'auto';
+  preferPureBlackInDark: boolean;
   maxHistorySize: number;
 }
