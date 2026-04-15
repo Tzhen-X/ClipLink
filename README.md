@@ -50,10 +50,27 @@ ClipLink（中文名：**云剪**）乃 **SyncClipboard 生态之 HarmonyOS 客�
 
 > `build-profile.json5` 已改为公开仓库安全模板；构建前请先替换为你本地的签名材料。
 
-### CLI
+### 本地私有签名配置
+
+- 提交到仓库的是：`build-profile.template.json5`
+- 你本地私有使用：`build-profile.local.json5`
+- 实际构建读取的：`build-profile.json5`（由脚本自动生成，已加入 `.gitignore`）
+
+首次配置可执行：
 
 ```bash
-hvigorw assembleHap --mode module -p module=entry@default -p product=default -p buildMode=debug
+cp build-profile.template.json5 build-profile.local.json5
+```
+
+然后把 `build-profile.local.json5` 改成你机器上的真实签名材料即可。  
+之后提交代码时，不再需要反复改回模板。
+
+### CLI
+
+推荐使用仓库内包装脚本，它会优先采用 `build-profile.local.json5`，否则回退到模板配置：
+
+```bash
+./scripts/hvigorw-local.sh assembleHap --mode module -p module=entry@default -p product=default -p buildMode=debug
 ```
 
 ### 安装与启动

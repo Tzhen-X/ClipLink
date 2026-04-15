@@ -5,7 +5,6 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          // Fill these values with your local Harmony signing materials before building.
           "certpath": "/path/to/your-debug.cer",
           "keyAlias": "debugKey",
           "keyPassword": "YOUR_KEY_PASSWORD",

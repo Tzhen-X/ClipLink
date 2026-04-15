@@ -18,6 +18,8 @@ oh_modules/
 # Local config
 local.properties
 entry/.test/
+build-profile.json5
+build-profile.local.json5
 
 # OS
 .DS_Store
