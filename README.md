@@ -125,3 +125,8 @@ entry/src/main/resources/        模块资源与本地化文案
 本项目采用 **MIT License**。详见 [LICENSE](./LICENSE)。
 
 上游主项目 `SyncClipboard` 同样采用 MIT License；本项目 README 中已明确引用并致谢其来源。
+
+## 图标权利声明
+
+本项目的应用图标及相关视觉标识，其权利归本项目作者所有。  
+未经明确授权，不得转载、复制、分发、修改或用于其他项目、产品、宣传材料及再发布场景。
