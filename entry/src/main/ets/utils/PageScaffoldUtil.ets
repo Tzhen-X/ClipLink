@@ -145,7 +145,7 @@ export function getSystemSafeAreaInsets(topInset: number, bottomInset: number): 
 
 export function getWindowChromeSpec(): WindowChromeSpec {
   return {
-    usesFullscreenLayout: false,
+    usesFullscreenLayout: true,
     usesTransparentSystemBars: false,
     managesNavigationBar: false
   };

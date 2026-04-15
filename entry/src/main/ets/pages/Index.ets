@@ -74,41 +74,47 @@ struct Index {
   }
 
   build() {
-    Column() {
-      Tabs({ index: this.currentTabIndex }) {
-        ForEach(this.tabs, (tab: MainTabSpec, index: number) => {
-          TabContent() {
-            if (tab.key === 'home') {
-              HomePage()
-            } else if (tab.key === 'history') {
-              HistoryPage()
-            } else {
-              SettingsPage()
+    Stack() {
+      Column() {
+        Tabs({ index: this.currentTabIndex }) {
+          ForEach(this.tabs, (tab: MainTabSpec, index: number) => {
+            TabContent() {
+              if (tab.key === 'home') {
+                HomePage()
+              } else if (tab.key === 'history') {
+                HistoryPage()
+              } else {
+                SettingsPage()
+              }
             }
-          }
-          .tabBar(this.TabBuilder(tab, index))
-          .clip(false)
-        }, (tab: MainTabSpec) => tab.key)
+            .tabBar(this.TabBuilder(tab, index))
+            .clip(false)
+          }, (tab: MainTabSpec) => tab.key)
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .barPosition(BarPosition.End)
+        .barHeight(this.tabLayout.barHeight)
+        .barBackgroundColor(this.getPalette().pageSurface)
+        .backgroundBlurStyle(BlurStyle.NONE)
+        .barMode(BarMode.Fixed)
+        .scrollable(false)
+        .clip(false)
+        .onChange((index: number) => {
+          this.currentTabIndex = index;
+        })
       }
       .width('100%')
-      .layoutWeight(1)
-      .barPosition(BarPosition.End)
-      .barHeight(this.tabLayout.barHeight)
-      .barBackgroundColor(this.getPalette().pageSurface)
-      .backgroundBlurStyle(BlurStyle.NONE)
-      .barMode(BarMode.Fixed)
-      .scrollable(false)
-      .clip(false)
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-      .onChange((index: number) => {
-        this.currentTabIndex = index;
+      .height('100%')
+      .padding({
+        top: this.getSafeAreaInsets().top,
+        bottom: this.getSafeAreaInsets().bottom
       })
-
+      .backgroundColor(this.getPalette().pageBackground)
     }
     .width('100%')
     .height('100%')
-    .padding({ top: this.getSafeAreaInsets().top })
-    .clip(false)
-    .backgroundColor(this.getPalette().pageBackground)
+    .backgroundColor(this.getPalette().pageSurface)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }

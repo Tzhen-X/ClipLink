@@ -119,7 +119,7 @@ export default function testsuite() {
 
     it('uses system-managed window chrome instead of fullscreen transparent bars', 0, () => {
       const chrome = getWindowChromeSpec();
-      expect(chrome.usesFullscreenLayout).assertEqual(false);
+      expect(chrome.usesFullscreenLayout).assertEqual(true);
       expect(chrome.usesTransparentSystemBars).assertEqual(false);
       expect(chrome.managesNavigationBar).assertEqual(false);
     });
