@@ -48,6 +48,7 @@ export default function testsuite() {
       expect(layout.usesExternalBottomBar).assertEqual(false);
       expect(layout.safeAreaFollowsBarSurface).assertEqual(true);
       expect(layout.rootOwnsBottomSafeArea).assertEqual(true);
+      expect(layout.isFloating).assertEqual(true);
     });
 
     it('switches current clipboard into image preview mode when summary indicates an image', 0, () => {
@@ -119,7 +120,7 @@ export default function testsuite() {
 
     it('uses system-managed window chrome instead of fullscreen transparent bars', 0, () => {
       const chrome = getWindowChromeSpec();
-      expect(chrome.usesFullscreenLayout).assertEqual(true);
+      expect(chrome.usesFullscreenLayout).assertEqual(false);
       expect(chrome.usesTransparentSystemBars).assertEqual(false);
       expect(chrome.managesNavigationBar).assertEqual(false);
     });

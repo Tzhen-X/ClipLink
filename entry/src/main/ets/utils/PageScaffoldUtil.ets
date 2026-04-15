@@ -27,6 +27,7 @@ export interface BottomTabLayoutSpec {
   usesExternalBottomBar: boolean;
   safeAreaFollowsBarSurface: boolean;
   rootOwnsBottomSafeArea: boolean;
+  isFloating: boolean;
 }
 
 export interface SystemSafeAreaInsets {
@@ -132,7 +133,8 @@ export function getBottomTabLayoutSpec(): BottomTabLayoutSpec {
     usesSystemSafeAreaExpansion: false,
     usesExternalBottomBar: false,
     safeAreaFollowsBarSurface: true,
-    rootOwnsBottomSafeArea: true
+    rootOwnsBottomSafeArea: true,
+    isFloating: true
   };
 }
 
@@ -145,7 +147,7 @@ export function getSystemSafeAreaInsets(topInset: number, bottomInset: number): 
 
 export function getWindowChromeSpec(): WindowChromeSpec {
   return {
-    usesFullscreenLayout: true,
+    usesFullscreenLayout: false,
     usesTransparentSystemBars: false,
     managesNavigationBar: false
   };
