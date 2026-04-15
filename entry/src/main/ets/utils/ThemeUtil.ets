@@ -45,7 +45,7 @@ export class ThemeUtil {
           elevatedBackground: '#1A2840',
           inputBackground: '#172338',
           borderColor: '#314563',
-          shadowColor: '#5EA1FF22',
+          shadowColor: '#00000026',
           textPrimary: '#F5F7FA',
           textSecondary: '#C3CEDD',
           textMuted: '#8C9AAF',
@@ -68,7 +68,7 @@ export class ThemeUtil {
           elevatedBackground: '#F4F8FF',
           inputBackground: '#FFFFFF',
           borderColor: '#D6E1F0',
-          shadowColor: '#5EA1FF1A',
+          shadowColor: '#17233812',
           textPrimary: '#1B1F27',
           textSecondary: '#5B667A',
           textMuted: '#7F8A9D',
@@ -91,14 +91,17 @@ export class ThemeUtil {
       return;
     }
     const palette = ThemeUtil.getPalette(appTheme, systemColorMode);
+    const systemBarContentColor = palette.isDark ? '#FFFFFF' : '#000000';
     try {
       const mainWindow = windowStage.getMainWindowSync();
       mainWindow.setWindowBackgroundColor(palette.pageBackground);
+      await mainWindow.setWindowLayoutFullScreen(true);
+      await mainWindow.setWindowSystemBarEnable(['status', 'navigation']);
       await mainWindow.setWindowSystemBarProperties({
-        statusBarColor: palette.pageBackground,
-        navigationBarColor: palette.pageBackground,
-        statusBarContentColor: palette.textPrimary,
-        navigationBarContentColor: palette.textPrimary
+        statusBarColor: '#00000000',
+        navigationBarColor: '#00000000',
+        statusBarContentColor: systemBarContentColor,
+        navigationBarContentColor: systemBarContentColor
       });
     } catch (error) {
       console.error('[ThemeUtil] applyTheme error:', JSON.stringify(error));

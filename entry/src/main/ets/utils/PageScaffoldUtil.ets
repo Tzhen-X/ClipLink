@@ -1,0 +1,149 @@
+export type MainTabKey = 'home' | 'history' | 'settings';
+export type StatusTone = 'neutral' | 'success' | 'danger';
+export type ClipboardPreviewMode = 'text' | 'image';
+
+export interface MainTabSpec {
+  key: MainTabKey;
+  label: string;
+}
+
+export interface SettingsSectionSpec {
+  key: 'server' | 'preferences';
+  title: string;
+  description: string;
+  rowCount: number;
+}
+
+export interface BottomTabLayoutSpec {
+  barHeight: number;
+  itemHeight: number;
+  iconSize: number;
+  labelTopMargin: number;
+  usesSelectedBackground: boolean;
+}
+
+export interface HistoryListStyleSpec {
+  usesSubtitle: boolean;
+  usesDivider: boolean;
+  metaLines: number;
+  previewHeight: number;
+  showsCopyLabel: boolean;
+  sideInset: number;
+}
+
+export interface AutoSyncIndicatorSpec {
+  label: string;
+  tone: StatusTone;
+}
+
+export interface ActionButtonSpec {
+  controlSize: 'small' | 'normal';
+  fullWidth: boolean;
+}
+
+export interface HistoryActionFeedbackSpec {
+  mode: 'toast';
+  message: string;
+  duration: number;
+}
+
+export function getMainTabSpecs(): MainTabSpec[] {
+  return [
+    { key: 'home', label: 'Home' },
+    { key: 'history', label: 'History' },
+    { key: 'settings', label: 'Settings' }
+  ];
+}
+
+export function getSyncStatusTone(status: string): StatusTone {
+  if (status.includes('Error') || status.includes('failed')) {
+    return 'danger';
+  }
+
+  if (status.includes('Success') || status.includes('updated')) {
+    return 'success';
+  }
+
+  return 'neutral';
+}
+
+export function getSettingsSectionSpecs(): SettingsSectionSpec[] {
+  return [
+    {
+      key: 'server',
+      title: 'Server Connection',
+      description: 'Keep the endpoint and credentials together in one compact card.',
+      rowCount: 3
+    },
+    {
+      key: 'preferences',
+      title: 'Preferences',
+      description: 'Theme, polling, and history retention stay in a standard settings group.',
+      rowCount: 3
+    }
+  ];
+}
+
+export function getBottomTabLayoutSpec(): BottomTabLayoutSpec {
+  return {
+    barHeight: 50,
+    itemHeight: 52,
+    iconSize: 24,
+    labelTopMargin: 4,
+    usesSelectedBackground: false
+  };
+}
+
+export function getClipboardPreviewMode(summary: string): ClipboardPreviewMode {
+  return summary.includes('[Image') ? 'image' : 'text';
+}
+
+export function getHistoryListStyleSpec(): HistoryListStyleSpec {
+  return {
+    usesSubtitle: false,
+    usesDivider: false,
+    metaLines: 1,
+    previewHeight: 132,
+    showsCopyLabel: false,
+    sideInset: 0
+  };
+}
+
+export function getAutoSyncIndicatorSpec(isActive: boolean): AutoSyncIndicatorSpec {
+  return {
+    label: 'Auto Sync',
+    tone: isActive ? 'success' : 'neutral'
+  };
+}
+
+export function getActionButtonSpec(kind: 'home-primary' | 'home-secondary' | 'settings-save'): ActionButtonSpec {
+  switch (kind) {
+    case 'settings-save':
+      return { controlSize: 'small', fullWidth: false };
+    default:
+      return { controlSize: 'small', fullWidth: false };
+  }
+}
+
+export function getCardEffectMode(isDark: boolean): 'none' | 'subtle' {
+  return isDark ? 'none' : 'subtle';
+}
+
+export function getHistoryActionFeedback(
+  action: 'copy-text' | 'copy-image' | 'save-image',
+  success: boolean
+): HistoryActionFeedbackSpec {
+  if (action === 'save-image') {
+    return {
+      mode: 'toast',
+      message: success ? 'Image saved' : 'Image download failed',
+      duration: 1800
+    };
+  }
+
+  return {
+    mode: 'toast',
+    message: success ? 'Copied to clipboard' : 'Copy failed',
+    duration: 1600
+  };
+}

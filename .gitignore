@@ -17,6 +17,7 @@ oh_modules/
 
 # Local config
 local.properties
+entry/.test/
 
 # OS
 .DS_Store

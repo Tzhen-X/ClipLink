@@ -5,13 +5,14 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.cer",
+          // Fill these values with your local Harmony signing materials before building.
+          "certpath": "/path/to/your-debug.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BA163F2BE4E5818DD1AA4C40F6D7F4FE893AAE9DB86CA9025F68FB377F99ABAF175FD19B9C576AF",
-          "profile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p7b",
+          "keyPassword": "YOUR_KEY_PASSWORD",
+          "profile": "/path/to/your-debug.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/Users/xiebaiyuan/.ohos/config/default_syncclipboard-harmony_Svi2Awt88uFZO_KxJQqXXP3GH49mBD3bbHwXGv0QMLo=.p12",
-          "storePassword": "0000001BDE825839BAE01AC2E1AE47DB3C163F23D8F7CD96ACFA156078383952B3C653693AEAFBFD6D285A"
+          "storeFile": "/path/to/your-debug.p12",
+          "storePassword": "YOUR_STORE_PASSWORD"
         }
       }
     ],

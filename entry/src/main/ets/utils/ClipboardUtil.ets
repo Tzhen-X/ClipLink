@@ -103,6 +103,28 @@ export class ClipboardUtil {
     }
   }
 
+  static async getClipboardImage(): Promise<image.PixelMap | undefined> {
+    try {
+      const hasPermission = await ClipboardUtil.ensureReadPermission();
+      if (!hasPermission) {
+        return undefined;
+      }
+      const systemPasteboard = pasteboard.getSystemPasteboard();
+      if (!(await systemPasteboard.hasData())) {
+        return undefined;
+      }
+
+      const pasteData = await systemPasteboard.getData();
+      if (pasteData.getPrimaryMimeType() !== pasteboard.MIMETYPE_PIXELMAP) {
+        return undefined;
+      }
+      return pasteData.getPrimaryPixelMap();
+    } catch (error) {
+      console.error('[ClipboardUtil] getClipboardImage error:', JSON.stringify(error));
+      return undefined;
+    }
+  }
+
   /**
    * Write text to system clipboard
    */

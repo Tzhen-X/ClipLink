@@ -7,6 +7,7 @@ import { ConfigurationConstant } from '@kit.AbilityKit';
 import { image } from '@kit.ImageKit';
 import { ImageUtil } from '../utils/ImageUtil';
 import { ThemeUtil, ThemePalette } from '../utils/ThemeUtil';
+import { getHistoryActionFeedback, getHistoryListStyleSpec } from '../utils/PageScaffoldUtil';
 
 interface HistoryViewItem extends HistoryRecordDto {
   previewPixelMap?: image.PixelMap;
@@ -16,7 +17,7 @@ interface HistoryViewItem extends HistoryRecordDto {
 export default struct HistoryPage {
   @State historyList: HistoryViewItem[] = [];
   @State isLoading: boolean = false;
-  @State actionStatus: string = '';
+  @State isRefreshing: boolean = false;
   @StorageLink('historyRefreshToken') @Watch('handleHistoryRefreshTokenChange')
   historyRefreshToken: number = 0;
   @StorageLink('appTheme') appTheme: string = 'auto';
@@ -24,9 +25,17 @@ export default struct HistoryPage {
     ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
 
   private storageService: HistoryStorageService = HistoryStorageService.getInstance();
+  private readonly listStyle = getHistoryListStyleSpec();
 
   private getPalette(): ThemePalette {
     return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
+  }
+
+  private showActionToast(message: string, duration: number = 1600): void {
+    this.getUIContext().getPromptAction().showToast({
+      message: message,
+      duration: duration
+    });
   }
 
   aboutToAppear() {
@@ -56,7 +65,9 @@ export default struct HistoryPage {
   }
 
   private async loadHistory() {
-    this.isLoading = true;
+    if (!this.isRefreshing) {
+      this.isLoading = true;
+    }
     try {
       const config = ConfigService.getInstance().getConfig();
       // Load from local storage first
@@ -78,6 +89,7 @@ export default struct HistoryPage {
       console.error('[HistoryPage] loadHistory error:', JSON.stringify(error));
     } finally {
       this.isLoading = false;
+      this.isRefreshing = false;
     }
   }
 
@@ -151,7 +163,8 @@ export default struct HistoryPage {
           ? await this.createSyncService().downloadHistoryText(`Text-${item.hash}`)
           : (item.text || '');
         await ClipboardUtil.setClipboardText(text);
-        this.actionStatus = 'Text copied to clipboard';
+        const feedback = getHistoryActionFeedback('copy-text', true);
+        this.showActionToast(feedback.message, feedback.duration);
         return;
       }
 
@@ -159,14 +172,16 @@ export default struct HistoryPage {
         const binary = await this.createSyncService().downloadHistoryBinary(`Image-${item.hash}`);
         const pixelMap = item.previewPixelMap ?? await ImageUtil.createPixelMapFromBuffer(binary);
         await ClipboardUtil.setClipboardImage(pixelMap);
-        this.actionStatus = 'Image copied to clipboard';
+        const feedback = getHistoryActionFeedback('copy-image', true);
+        this.showActionToast(feedback.message, feedback.duration);
         if (!item.previewPixelMap) {
           void pixelMap.release();
         }
       }
     } catch (error) {
       console.error('[HistoryPage] handleItemClick error:', JSON.stringify(error));
-      this.actionStatus = 'Copy failed';
+      const feedback = getHistoryActionFeedback('copy-text', false);
+      this.showActionToast(feedback.message, feedback.duration);
     }
   }
 
@@ -178,10 +193,12 @@ export default struct HistoryPage {
         `${item.type}-${item.hash}`,
         ImageUtil.guessImageExtension(binary)
       );
-      this.actionStatus = `Saved to ${filePath}`;
+      const feedback = getHistoryActionFeedback('save-image', true);
+      this.showActionToast(`${feedback.message}: ${filePath}`, feedback.duration);
     } catch (error) {
       console.error('[HistoryPage] handleImageDownload error:', JSON.stringify(error));
-      this.actionStatus = 'Image download failed';
+      const feedback = getHistoryActionFeedback('save-image', false);
+      this.showActionToast(feedback.message, feedback.duration);
     }
   }
 
@@ -199,11 +216,15 @@ export default struct HistoryPage {
 
   build() {
     Column() {
+      Column() {
         Text('History')
-          .fontSize(24)
+          .fontSize($r('sys.float.Title_L'))
           .fontWeight(FontWeight.Bold)
           .fontColor(this.getPalette().textPrimary)
-          .margin({ top: 20, bottom: 20 })
+      }
+      .width('90%')
+      .alignItems(HorizontalAlign.Start)
+      .margin({ top: $r('sys.float.padding_level8'), bottom: $r('sys.float.padding_level6') })
 
       if (this.isLoading) {
         LoadingProgress()
@@ -211,116 +232,100 @@ export default struct HistoryPage {
           .height(50)
       } else if (this.historyList.length === 0) {
         Text('No history items')
-          .fontSize(16)
-          .fontColor(this.getPalette().textMuted)
+          .fontSize($r('sys.float.Body_M'))
+          .fontColor(this.getPalette().textSecondary)
           .margin({ top: 50 })
       } else {
-        List({ space: 10 }) {
-          ForEach(this.historyList, (item: HistoryViewItem) => {
-            ListItem() {
-              Column() {
-                Row() {
-                  Text(item.type)
-                    .fontSize(12)
-                    .fontColor(this.getPalette().textSecondary)
-                    .padding({ left: 4, right: 4, top: 2, bottom: 2 })
-                    .backgroundColor(this.getPalette().elevatedBackground)
-                    .borderRadius(4)
-                  
-                  Text(this.formatDate(item.lastAccessed))
-                    .fontSize(12)
-                    .fontColor(this.getPalette().textMuted)
-                    .margin({ left: 10 })
-                  
-                  Blank()
-
-                  if (item.starred) {
-                    Text('★')
-                      .fontSize(16)
-                      .fontColor('#FFD700')
-                  }
-                }
-                .width('100%')
-                .margin({ bottom: 5 })
-
-                if (item.type === 'Image') {
-                  if (item.previewPixelMap) {
-                    Image(item.previewPixelMap)
-                      .width('100%')
-                      .height(150)
-                      .objectFit(ImageFit.Contain)
-                      .borderRadius(8)
-                      .backgroundColor(this.getPalette().elevatedBackground)
-                  } else {
-                    Text(item.hasData ? '[Image loading...]' : '[Image preview unavailable]')
-                      .fontSize(14)
-                      .fontColor(this.getPalette().textSecondary)
-                      .width('100%')
-                      .padding(12)
-                      .backgroundColor(this.getPalette().elevatedBackground)
-                      .borderRadius(8)
-                  }
-                } else {
-                  Text(item.text || '[No preview]')
-                    .fontSize(14)
-                    .fontColor(this.getPalette().textPrimary)
-                    .width('100%')
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .maxLines(2)
-                }
-
-                if (item.size) {
-                  Text(`${item.size} bytes`)
-                    .fontSize(12)
-                    .fontColor(this.getPalette().textMuted)
-                    .margin({ top: 5 })
-                }
-
-                if (item.type === 'Image' && item.hasData) {
+        Refresh({ refreshing: $$this.isRefreshing }) {
+          List({ space: 10 }) {
+            ForEach(this.historyList, (item: HistoryViewItem) => {
+              ListItem() {
+                Column({ space: 8 }) {
                   Row() {
-                    Button('Download')
-                      .fontSize(14)
+                    Text(item.type)
+                      .fontSize($r('sys.float.Body_S'))
                       .fontWeight(FontWeight.Medium)
-                      .fontColor(this.getPalette().buttonSecondaryText)
-                      .backgroundColor(this.getPalette().buttonSecondaryBackground)
-                      .borderRadius(18)
-                      .onClick(() => this.handleImageDownload(item))
+                      .fontColor(this.getPalette().textPrimary)
+
+                    Blank()
+
+                    if (item.starred) {
+                      Text('★')
+                        .fontSize($r('sys.float.Body_L'))
+                        .fontColor('#FFD700')
+                    }
+
+                    Text(this.formatDate(item.lastAccessed))
+                      .fontSize($r('sys.float.Caption_M'))
+                      .fontColor(this.getPalette().textSecondary)
                   }
                   .width('100%')
-                  .justifyContent(FlexAlign.End)
-                  .margin({ top: 10 })
+
+                  if (item.type === 'Image') {
+                    if (item.previewPixelMap) {
+                      Image(item.previewPixelMap)
+                        .width('100%')
+                        .height(this.listStyle.previewHeight)
+                        .objectFit(ImageFit.Contain)
+                        .borderRadius($r('sys.float.corner_radius_level6'))
+                        .backgroundColor(this.getPalette().elevatedBackground)
+                    } else {
+                      Text(item.hasData ? '[Image loading...]' : '[Image preview unavailable]')
+                        .fontSize($r('sys.float.Body_M'))
+                        .fontColor(this.getPalette().textSecondary)
+                        .width('100%')
+                        .padding($r('sys.float.padding_level4'))
+                        .backgroundColor(this.getPalette().elevatedBackground)
+                        .borderRadius($r('sys.float.corner_radius_level6'))
+                    }
+                  } else {
+                      Text(item.text || '[No preview]')
+                        .fontSize($r('sys.float.Body_M'))
+                        .fontColor(this.getPalette().textPrimary)
+                        .width('100%')
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .maxLines(3)
+                  }
+
+                  Row() {
+                    Text(item.size ? `${item.size} bytes` : ' ')
+                      .fontSize($r('sys.float.Caption_M'))
+                      .fontColor(this.getPalette().textSecondary)
+                    Blank()
+
+                    if (item.type === 'Image' && item.hasData) {
+                      Button('Save', {
+                        type: ButtonType.Capsule,
+                        buttonStyle: ButtonStyleMode.NORMAL,
+                        controlSize: ControlSize.SMALL
+                      })
+                        .fontColor(this.getPalette().buttonSecondaryText)
+                        .backgroundColor(this.getPalette().buttonSecondaryBackground)
+                        .onClick(() => this.handleImageDownload(item))
+                    }
+                  }
+                  .width('100%')
                 }
+                .width('100%')
+                .padding($r('sys.float.padding_level5'))
+                .backgroundColor(this.getPalette().pageSurface)
+                .borderRadius($r('sys.float.corner_radius_level8'))
+                .shadow({ radius: 6, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 2 })
               }
-              .width('100%')
-              .padding(16)
-              .backgroundColor(this.getPalette().pageSurface)
-              .borderRadius(16)
-              .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
-            }
-            .onClick(() => this.handleItemClick(item))
-          }, (item: HistoryRecordDto) => `${item.type}-${item.hash}`)
+              .onClick(() => this.handleItemClick(item))
+            }, (item: HistoryRecordDto) => `${item.type}-${item.hash}`)
+          }
+          .width('96%')
+          .layoutWeight(1)
         }
-        .width('90%')
+        .width('96%')
         .layoutWeight(1)
+        .onRefreshing(() => {
+          this.isRefreshing = true;
+          void this.loadHistory();
+        })
       }
 
-      if (this.actionStatus) {
-        Text(this.actionStatus)
-          .fontSize(13)
-          .fontColor(this.actionStatus.includes('failed') ? this.getPalette().danger : this.getPalette().success)
-          .margin({ top: 12 })
-      }
-
-      Button('Refresh')
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.getPalette().buttonSecondaryText)
-        .width('90%')
-        .height(48)
-        .backgroundColor(this.getPalette().buttonSecondaryBackground)
-        .borderRadius(24)
-        .margin({ top: 20, bottom: 20 })
-        .onClick(() => this.loadHistory())
     }
     .width('100%')
     .height('100%')

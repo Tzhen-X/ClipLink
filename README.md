@@ -1,213 +1,110 @@
-# SyncClipboard HarmonyOS Client (MVP)
+# ClipLink / 云剪
 
-This is a minimal viable product (MVP) HarmonyOS client for SyncClipboard, built with ArkTS and the Stage Model.
+ClipLink（中文名：**云剪**）乃 **SyncClipboard 生态之 HarmonyOS 客户端实现**。  
+本项目专注于 HarmonyOS / ArkTS / Stage Model 端之体验与适配；**并非独立协议体系**。其剪贴板同步协议、服务器部署方式、主要接口约定，皆以主项目 **SyncClipboard** 为基础。
 
-## Features
+## 项目定位
 
-### Implemented (MVP Scope)
-- ✅ **Three-tab navigation**: Home / History / Settings
-- ✅ **Home Page**:
-  - Display current clipboard text preview
-  - Upload button to sync clipboard to server
-  - Download button to fetch server clipboard
-  - Auto-sync toggle with configurable polling interval
-  - Real-time sync status display
-- ✅ **History Page**:
-  - List view of clipboard history
-  - Syncs with server via `/api/history/query` and `/api/history` endpoints
-  - Local persistence using RDB (RelationalStore)
-  - Tap to copy history item to clipboard
-- ✅ **Settings Page**:
-  - Server configuration (URL, username, password)
-  - Polling interval adjustment
-  - Theme selection (Light/Dark/Auto)
-  - Max history size setting
-  - Configuration persistence via Preferences API
-- ✅ **Service Layer**:
-  - `ConfigService`: App config management with Preferences
-  - `HttpClient`: Basic HTTP GET/PUT/POST abstraction
-  - `SyncClipboardService`: API client for SyncClipboard endpoints
-  - `HistoryStorageService`: Local history persistence with RDB
-  - `PollingController`: Simple foreground polling timer
-  - `ClipboardUtil`: System clipboard read/write via Pasteboard API
-  - `HashUtil`: SHA256 hashing (uppercase hex, compatible with existing clients)
+- **主项目**：[`Jeric-X/SyncClipboard`](https://github.com/Jeric-X/SyncClipboard?tab=readme-ov-file)
+- **本项目**：HarmonyOS 客户端实现（ClipLink / 云剪）
+- **必要依赖**：如欲实际使用本客户端，须先部署或接入上游 `SyncClipboard` 服务器
 
-### Text Clipboard Flow
-- Text clipboard content can be uploaded to and downloaded from server
-- Hash calculation compatible with existing SyncClipboard protocol (uppercase SHA256)
-- Profile DTO and History DTO models match server format
-- Supports `/SyncClipboard.json` endpoint for current clipboard
-- Supports `/api/history/query`, `/api/history`, and `/api/history/{profileId}` endpoints for history records
+换言之：
 
-### Deferred (Out of MVP Scope)
-- ❌ Image/File clipboard support (models exist but no UI implementation)
-- ❌ SignalR real-time sync
-- ❌ Share receive/send functionality
-- ❌ SMS forwarding
-- ❌ Quick actions/shortcuts
-- ❌ Background resident service
-- ❌ File upload/download implementation
+- `SyncClipboard` 负责 **服务器、协议、跨平台生态**
+- `ClipLink` 负责 **HarmonyOS 客户端实现与交互适配**
 
-## Project Structure
+## 现有能力
 
-```
-harmony/
-├── AppScope/
-│   ├── app.json5                    # App bundle config
-│   └── resources/                   # App-level resources
-├── entry/                           # Entry module (HAP)
-│   ├── src/main/
-│   │   ├── ets/
-│   │   │   ├── entryability/
-│   │   │   │   └── EntryAbility.ets    # App entry point
-│   │   │   ├── pages/
-│   │   │   │   ├── Index.ets           # Tab container
-│   │   │   │   ├── HomePage.ets        # Home tab
-│   │   │   │   ├── HistoryPage.ets     # History tab
-│   │   │   │   └── SettingsPage.ets    # Settings tab
-│   │   │   ├── services/
-│   │   │   │   ├── ConfigService.ets         # Config persistence
-│   │   │   │   ├── HttpClient.ets            # HTTP wrapper
-│   │   │   │   ├── SyncClipboardService.ets  # API client
-│   │   │   │   ├── HistoryStorageService.ets # Local DB
-│   │   │   │   └── PollingController.ets     # Timer
-│   │   │   ├── utils/
-│   │   │   │   ├── ClipboardUtil.ets   # Clipboard operations
-│   │   │   │   └── HashUtil.ets        # SHA256 hashing
-│   │   │   └── types/
-│   │   │       └── ApiTypes.ets        # DTO models
-│   │   ├── resources/                  # Module resources
-│   │   └── module.json5                # Module config
-│   ├── build-profile.json5
-│   ├── hvigorfile.ts
-│   └── oh-package.json5
-├── build-profile.json5              # Project build config
-├── hvigorfile.ts                    # Hvigor build script
-├── oh-package.json5                 # Project dependencies
-└── README.md                        # This file
+- HarmonyOS 三页签结构：Home / History / Settings
+- 当前剪贴板预览（文字 / 图片）
+- 上传、下载、前台 Auto Sync
+- 历史记录同步、图片预览、点击复制、图片保存
+- 本地配置持久化
+- Light / Dark / Auto 主题
+- 中英文应用名显示：
+  - 中文设备：**云剪**
+  - 英文设备：**ClipLink**
+
+## 使用前提
+
+本项目 **不能脱离上游主项目单独完成服务端能力**。  
+使用前，请先参考主项目 README 部署服务端：
+
+- 上游主项目：<https://github.com/Jeric-X/SyncClipboard?tab=readme-ov-file>
+- 其中服务器部署、Docker、配置说明，皆以主项目文档为准
+
+建议阅读上游 README 中如下部分：
+
+1. **服务器**
+2. **客户端配置说明**
+3. **API**
+
+## 构建与运行
+
+### 环境
+
+- HarmonyOS / OpenHarmony SDK API 20
+- DevEco Studio 5.x
+- 已配置本地签名
+
+> `build-profile.json5` 已改为公开仓库安全模板；构建前请先替换为你本地的签名材料。
+
+### CLI
+
+```bash
+hvigorw assembleHap --mode module -p module=entry@default -p product=default -p buildMode=debug
 ```
 
-## Build & Run
+### 安装与启动
 
-### Prerequisites
-- OpenHarmony SDK API 20
-- DevEco Studio 5.0 or later
-- HarmonyOS device or emulator
+```bash
+hdc install -r entry/build/default/outputs/default/entry-default-signed.hap
+hdc shell aa start -a EntryAbility -b com.xiebaiyuan.syncclipboard.harmony
+```
 
-### Steps
-1. **Import Project**:
-   - Open DevEco Studio
-   - File → Open → Select `harmony/` directory
-   - Wait for project sync
+## 项目结构
 
-2. **Configure Signing**:
-    - File → Project Structure → Signing Configs
-    - Configure automatic signing or manual signing certificate
-   - Keep signing materials in your local environment only; this repository does not commit them
+```text
+AppScope/                        应用级资源
+entry/src/main/ets/entryability  HarmonyOS 入口能力
+entry/src/main/ets/pages/        Home / History / Settings
+entry/src/main/ets/services/     服务端通信、本地存储、轮询
+entry/src/main/ets/utils/        主题、剪贴板、图片等工具
+entry/src/main/resources/        模块资源与本地化文案
+```
 
-3. **Build**:
-   - Build → Make Module 'entry'
-   - Or use Hvigor CLI: `hvigorw assembleHap`
+## 协议与兼容性说明
 
-4. **Run**:
-    - Connect HarmonyOS device or start emulator
-    - Run → Run 'entry'
-    - Or use: `hvigorw installHapDebug`
+本项目与上游 `SyncClipboard` 服务端接口保持兼容，主要依赖：
 
-### Local CLI Setup
-1. Set `OHOS_BASE_SDK_HOME` to your local OpenHarmony SDK root.
-2. Put your local SDK path into `local.properties` as `sdk.dir=...`.
-3. Fill `app.signingConfigs` in `build-profile.json5` before installing to a device.
+- `GET /SyncClipboard.json`
+- `PUT /SyncClipboard.json`
+- `POST /api/history/query`
+- `POST /api/history`
+- `GET /api/history/{profileId}`
 
-### First Launch Configuration
-1. Launch the app
-2. Navigate to **Settings** tab
-3. Configure your SyncClipboard server:
-   - Server URL: `http://your-server:5033`
-   - Username: (optional, if auth enabled)
-   - Password: (optional, if auth enabled)
-4. Adjust polling interval if needed (default: 5 seconds)
-5. Tap **Save**
+接口字段、哈希规则、历史记录模型，以主项目文档与实现为准。  
+若上游协议升级，本客户端亦需同步适配。
 
-## API Compatibility
+## 致谢与引用
 
-This client is compatible with existing SyncClipboard server endpoints:
+本项目基于以下上游项目之协议、接口设计、服务端部署方案与整体生态而实现：
 
-### Profile Endpoint
-- `GET /SyncClipboard.json` - Get current clipboard
-- `PUT /SyncClipboard.json` - Upload current clipboard
+- **SyncClipboard**  
+  <https://github.com/Jeric-X/SyncClipboard?tab=readme-ov-file>
 
-### History API
-- `POST /api/history/query` - Query history records
-- `GET /api/history/{profileId}` - Get single record
-- `POST /api/history` - Upload new record
+特别感谢上游作者与社区维护者提供：
 
-### Data Format
-- **ProfileDto**: `{ type, hash, text, hasData, dataName, size }`
-- **HistoryRecordDto**: `{ hash, type, text, createTime, lastModified, starred, pinned, hasData, size, version, isDeleted }`
-- **Hash Rule**: Uppercase hex SHA256 of text content
+- 服务端实现
+- Docker / 独立部署方案
+- 协议与 API 说明
+- 多平台客户端生态
 
-## Development Notes
-
-### Hash Compatibility
-The `HashUtil.calculateTextHash()` implementation uses HarmonyOS `cryptoFramework` API to compute SHA256 hashes in uppercase hex format, matching the existing RN client behavior.
-
-### Clipboard Operations
-- `ClipboardUtil` uses `@ohos.pasteboard` for text read/write
-- Only text clipboard is fully implemented in MVP
-- Image/File types exist in type definitions but lack implementation
-
-### HTTP Authentication
-- Basic Auth is implemented in `HttpClient`
-- Base64 encoding is done manually (no built-in util used)
-
-### Local Storage
-- App config: `dataPreferences` API (key-value store)
-- History records: `relationalStore` API (SQLite-based RDB)
-
-### Polling
-- Foreground-only polling via simple `setInterval`
-- No background service (out of MVP scope)
-- Stops when app is backgrounded (no persistent sync)
-
-## Limitations & Known Issues
-
-1. **Local Signing Required**: The repository does not include signing materials or machine-specific SDK paths. Add them locally before device installation.
-
-2. **No Runtime Testing**: Code is based on HarmonyOS API documentation but has not been executed on device/emulator.
-
-3. **Text-Only**: Only text clipboard is functional. Image/File support requires additional implementation.
-
-4. **Basic UI**: Minimal styling and no advanced animations. Focused on functionality over polish.
-
-5. **Error Handling**: Basic error handling implemented, but production apps would need more robust retry logic and user feedback.
-
-6. **No Localization**: All strings are hardcoded in English (also available in resources but not fully i18n ready).
-
-## Future Enhancements (Beyond MVP)
-
-- Image clipboard support with file upload/download
-- File clipboard support
-- SignalR integration for real-time push sync
-- Background service for continuous sync
-- Share extension for receiving content from other apps
-- SMS forwarding integration
-- Quick actions (widgets, shortcuts)
-- Advanced UI with animations and transitions
-- Full localization support
-- Unit tests and integration tests
-- Performance optimization for large history
+若你因本项目受益，也请同时关注并支持上游主项目。
 
 ## License
 
-Same as parent SyncClipboard project.
+本项目采用 **MIT License**。详见 [LICENSE](./LICENSE)。
 
-## References
-
-- HarmonyOS Documentation: https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/
-- SyncClipboard Protocol: See parent project `/docs` or existing RN client implementation
-- ArkTS Language: https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V5/arkts-get-started-V5
-
----
-
-**MVP Status**: Core text sync functionality complete. Ready for DevEco import and basic testing.
+上游主项目 `SyncClipboard` 同样采用 MIT License；本项目 README 中已明确引用并致谢其来源。

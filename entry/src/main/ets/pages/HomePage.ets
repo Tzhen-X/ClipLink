@@ -8,6 +8,14 @@ import { HistoryStorageService } from '../services/HistoryStorageService';
 import { HistoryRecordDto } from '../types/ApiTypes';
 import { image } from '@kit.ImageKit';
 import { ImageUtil } from '../utils/ImageUtil';
+import { hdsEffect } from '@kit.UIDesignKit';
+import {
+  getActionButtonSpec,
+  getAutoSyncIndicatorSpec,
+  getCardEffectMode,
+  getClipboardPreviewMode,
+  getSyncStatusTone
+} from '../utils/PageScaffoldUtil';
 
 interface HomeHistoryPreviewItem extends HistoryRecordDto {
   previewPixelMap?: image.PixelMap;
@@ -16,8 +24,11 @@ interface HomeHistoryPreviewItem extends HistoryRecordDto {
 @Component
 export default struct HomePage {
   @State currentText: string = '';
+  @State currentImage?: image.PixelMap = undefined;
+  @State currentClipboardMode: 'text' | 'image' = 'text';
   @State syncStatus: string = 'Idle';
   @State isPolling: boolean = false;
+  @State useHdsEffects: boolean = false;
   @State latestHistoryItem?: HomeHistoryPreviewItem = undefined;
   @StorageLink('appTheme') appTheme: string = 'auto';
   @StorageLink('systemColorMode') systemColorMode: number =
@@ -37,7 +48,21 @@ export default struct HomePage {
     return ThemeUtil.getPalette(this.appTheme, this.systemColorMode);
   }
 
+  private getCardLightEffect(): VisualEffect {
+    return new hdsEffect.HdsEffectBuilder().pointLight({
+      illuminatedType: hdsEffect.PointLightIlluminatedType.DEFAULT_FEATHERING_BORDER
+    }).buildEffect();
+  }
+
+  private getCardEffect(): VisualEffect | undefined {
+    if (!this.useHdsEffects || getCardEffectMode(this.getPalette().isDark) === 'none') {
+      return undefined;
+    }
+    return this.getCardLightEffect();
+  }
+
   aboutToAppear() {
+    this.useHdsEffects = canIUse('SystemCapability.UIDesign.HDSComponent.Core');
     ClipboardUtil.onUpdate(this.clipboardUpdateHandler);
     void this.initializePage();
   }
@@ -47,6 +72,7 @@ export default struct HomePage {
     ClipboardUtil.offUpdate(this.clipboardUpdateHandler);
     this.clearSyncStatusTimer();
     this.pollingController.dispose();
+    void this.currentImage?.release();
     void this.latestHistoryItem?.previewPixelMap?.release();
   }
 
@@ -99,9 +125,24 @@ export default struct HomePage {
 
   private async loadCurrentClipboard() {
     try {
-      this.currentText = await ClipboardUtil.getClipboardSummary();
+      const previousImage = this.currentImage;
+      this.currentImage = undefined;
+      const summary = await ClipboardUtil.getClipboardSummary();
+      this.currentClipboardMode = getClipboardPreviewMode(summary);
+      this.currentText = summary;
+      if (this.currentClipboardMode === 'image') {
+        this.currentImage = await ClipboardUtil.getClipboardImage();
+      }
+      if (previousImage && previousImage !== this.currentImage) {
+        void previousImage.release();
+      }
     } catch (error) {
       console.error('[HomePage] loadCurrentClipboard error:', JSON.stringify(error));
+      if (this.currentImage) {
+        void this.currentImage.release();
+      }
+      this.currentImage = undefined;
+      this.currentClipboardMode = 'text';
       this.currentText = 'Error reading clipboard';
     }
   }
@@ -229,151 +270,237 @@ export default struct HomePage {
   }
 
   build() {
-    Column() {
-      Text('Home')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(this.getPalette().textPrimary)
-        .margin({ top: 20, bottom: 20 })
-
-      Column() {
-        Text('Current Clipboard')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().textSecondary)
-          .margin({ bottom: 10 })
-        
-        Text(this.currentText)
-          .fontSize(14)
-          .fontColor(this.getPalette().textPrimary)
-          .width('100%')
-          .height(150)
-          .padding(10)
-          .backgroundColor(this.getPalette().elevatedBackground)
-          .borderRadius(8)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .maxLines(6)
-      }
-      .width('90%')
-      .height(228)
-      .margin({ bottom: 20 })
-      .padding(16)
-      .backgroundColor(this.getPalette().pageSurface)
-      .borderRadius(16)
-      .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
-
-      if (this.latestHistoryItem) {
-        Column() {
-          Row() {
-            Text('Latest History')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
+    Scroll() {
+      Column({ space: 14 }) {
+        Row() {
+          Column({ space: 4 }) {
+            Text('Home')
+              .fontSize($r('sys.float.Title_L'))
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.getPalette().textPrimary)
+            Text('Clipboard overview and quick sync')
+              .fontSize($r('sys.float.Body_S'))
               .fontColor(this.getPalette().textSecondary)
+          }
+          .alignItems(HorizontalAlign.Start)
+          Blank()
+          Text(this.syncStatus)
+            .fontSize($r('sys.float.Caption_L'))
+            .fontColor(
+              getSyncStatusTone(this.syncStatus) === 'danger'
+                ? this.getPalette().danger
+                : getSyncStatusTone(this.syncStatus) === 'success'
+                  ? this.getPalette().success
+                  : this.getPalette().textSecondary
+            )
+            .padding({
+              left: $r('sys.float.padding_level4'),
+              right: $r('sys.float.padding_level4'),
+              top: $r('sys.float.padding_level2'),
+              bottom: $r('sys.float.padding_level2')
+            })
+            .backgroundColor(this.getPalette().pageSurface)
+            .borderRadius($r('sys.float.corner_radius_level6'))
+        }
+        .width('90%')
+        .margin({ top: $r('sys.float.padding_level8') })
+
+        Column({ space: 14 }) {
+          Row() {
+            Column({ space: 4 }) {
+              Text('Current Clipboard')
+                .fontSize($r('sys.float.Subtitle_L'))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(this.getPalette().textPrimary)
+              Text('The latest clipboard content detected on this device.')
+                .fontSize($r('sys.float.Body_S'))
+                .fontColor(this.getPalette().textSecondary)
+            }
+            .alignItems(HorizontalAlign.Start)
             Blank()
-            Text(this.latestHistoryItem.type)
-              .fontSize(12)
+            Text(this.currentClipboardMode === 'image' ? 'Image' : 'Text')
+              .fontSize($r('sys.float.Caption_M'))
               .fontColor(this.getPalette().accent)
-              .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+              .padding({
+                left: $r('sys.float.padding_level4'),
+                right: $r('sys.float.padding_level4'),
+                top: $r('sys.float.padding_level2'),
+                bottom: $r('sys.float.padding_level2')
+              })
               .backgroundColor(this.getPalette().accentSoft)
-              .borderRadius(12)
+              .borderRadius($r('sys.float.corner_radius_level6'))
           }
           .width('100%')
-          .margin({ bottom: 10 })
 
-          if (this.latestHistoryItem.type === 'Image' && this.latestHistoryItem.previewPixelMap) {
-            Image(this.latestHistoryItem.previewPixelMap)
+          if (this.currentClipboardMode === 'image' && this.currentImage) {
+            Image(this.currentImage)
               .width('100%')
-              .height(150)
+              .height(140)
               .objectFit(ImageFit.Contain)
-              .borderRadius(12)
               .backgroundColor(this.getPalette().elevatedBackground)
+              .borderRadius($r('sys.float.corner_radius_level6'))
           } else {
-            Text(this.latestHistoryItem.text || '[No preview]')
-              .fontSize(14)
+            Text(this.currentText)
+              .fontSize($r('sys.float.Body_M'))
               .fontColor(this.getPalette().textPrimary)
               .width('100%')
-              .height(150)
-              .padding(12)
+              .height(140)
+              .padding($r('sys.float.padding_level4'))
               .backgroundColor(this.getPalette().elevatedBackground)
-              .borderRadius(12)
-              .maxLines(4)
+              .borderRadius($r('sys.float.corner_radius_level6'))
               .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .maxLines(6)
           }
 
-          if (this.latestHistoryItem.size) {
-            Text(`${this.latestHistoryItem.size} bytes`)
-              .fontSize(12)
-              .fontColor(this.getPalette().textMuted)
-              .margin({ top: 8 })
+          Row({ space: 8 }) {
+            Button('Upload', {
+              type: ButtonType.Capsule,
+              buttonStyle: ButtonStyleMode.NORMAL,
+              controlSize: getActionButtonSpec('home-primary').controlSize === 'small'
+                ? ControlSize.SMALL
+                : ControlSize.NORMAL
+            })
+              .fontColor(this.getPalette().buttonPrimaryText)
+              .backgroundColor(this.getPalette().buttonPrimaryBackground)
+              .onClick(() => this.handleUpload())
+
+            Button('Download', {
+              type: ButtonType.Capsule,
+              buttonStyle: ButtonStyleMode.NORMAL,
+              controlSize: getActionButtonSpec('home-secondary').controlSize === 'small'
+                ? ControlSize.SMALL
+                : ControlSize.NORMAL
+            })
+              .fontColor(this.getPalette().buttonSecondaryText)
+              .backgroundColor(this.getPalette().buttonSecondaryBackground)
+              .onClick(() => this.handleDownload())
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.End)
+        }
+        .width('90%')
+        .padding($r('sys.float.padding_level6'))
+        .backgroundColor(this.getPalette().pageSurface)
+        .borderRadius($r('sys.float.corner_radius_level8'))
+        .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
+        .visualEffect(this.getCardEffect())
+
+        Column({ space: 12 }) {
+          Row() {
+            Column({ space: 4 }) {
+              Text('Recent Activity')
+                .fontSize($r('sys.float.Subtitle_L'))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(this.getPalette().textPrimary)
+              Text('Latest synced item and automation controls.')
+                .fontSize($r('sys.float.Body_S'))
+                .fontColor(this.getPalette().textSecondary)
+            }
+            .alignItems(HorizontalAlign.Start)
+            Blank()
+            Row({ space: 8 }) {
+              Column()
+                .width(8)
+                .height(8)
+                .borderRadius(4)
+                .backgroundColor(
+                  getAutoSyncIndicatorSpec(this.isPolling).tone === 'success'
+                    ? this.getPalette().success
+                    : this.getPalette().textMuted
+                )
+              Text(getAutoSyncIndicatorSpec(this.isPolling).label)
+                .fontSize($r('sys.float.Body_S'))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(this.getPalette().textPrimary)
+            }
+              .padding({
+                left: $r('sys.float.padding_level4'),
+                right: $r('sys.float.padding_level4'),
+                top: $r('sys.float.padding_level2'),
+                bottom: $r('sys.float.padding_level2')
+              })
+              .backgroundColor(this.isPolling ? this.getPalette().accentSoft : this.getPalette().elevatedBackground)
+              .borderRadius($r('sys.float.corner_radius_level12'))
+              .onClick(() => this.togglePolling())
+          }
+          .width('100%')
+
+          if (this.latestHistoryItem) {
+            Column({ space: 10 }) {
+              Row() {
+                Text('Latest History')
+                  .fontSize($r('sys.float.Body_M'))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.getPalette().textPrimary)
+                Blank()
+                Text(this.latestHistoryItem.type)
+                  .fontSize($r('sys.float.Caption_M'))
+                  .fontColor(this.getPalette().accent)
+                  .padding({
+                    left: $r('sys.float.padding_level3'),
+                    right: $r('sys.float.padding_level3'),
+                    top: $r('sys.float.padding_level1'),
+                    bottom: $r('sys.float.padding_level1')
+                  })
+                  .backgroundColor(this.getPalette().accentSoft)
+                  .borderRadius($r('sys.float.corner_radius_level4'))
+              }
+              .width('100%')
+
+              if (this.latestHistoryItem.type === 'Image' && this.latestHistoryItem.previewPixelMap) {
+                Image(this.latestHistoryItem.previewPixelMap)
+                  .width('100%')
+                  .height(132)
+                  .objectFit(ImageFit.Contain)
+                  .borderRadius($r('sys.float.corner_radius_level6'))
+                  .backgroundColor(this.getPalette().elevatedBackground)
+              } else {
+                Text(this.latestHistoryItem.text || '[No preview]')
+                  .fontSize($r('sys.float.Body_M'))
+                  .fontColor(this.getPalette().textPrimary)
+                  .width('100%')
+                  .padding($r('sys.float.padding_level4'))
+                  .backgroundColor(this.getPalette().elevatedBackground)
+                  .borderRadius($r('sys.float.corner_radius_level6'))
+                  .maxLines(3)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+              }
+
+              Row() {
+                Text(this.latestHistoryItem.size ? `${this.latestHistoryItem.size} bytes` : 'Updated from history')
+                  .fontSize($r('sys.float.Caption_M'))
+                  .fontColor(this.getPalette().textSecondary)
+                Blank()
+                Text(this.isPolling ? 'Polling is active' : 'Manual sync mode')
+                  .fontSize($r('sys.float.Caption_M'))
+                  .fontColor(this.getPalette().textSecondary)
+              }
+              .width('100%')
+            }
+            .width('100%')
+          } else {
+            Text('No synced history item yet. Upload or download once to populate this section.')
+              .fontSize($r('sys.float.Body_S'))
+              .fontColor(this.getPalette().textSecondary)
+              .width('100%')
+              .padding($r('sys.float.padding_level4'))
+              .backgroundColor(this.getPalette().elevatedBackground)
+              .borderRadius($r('sys.float.corner_radius_level6'))
           }
         }
         .width('90%')
-        .height(228)
-        .padding(16)
-        .margin({ bottom: 20 })
+        .padding($r('sys.float.padding_level6'))
         .backgroundColor(this.getPalette().pageSurface)
-        .borderRadius(16)
+        .borderRadius($r('sys.float.corner_radius_level8'))
         .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
+        .visualEffect(this.getCardEffect())
+        .margin({ bottom: $r('sys.float.padding_level8') })
       }
-
-      Row({ space: 12 }) {
-        Button('Upload')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().buttonPrimaryText)
-          .width('42%')
-          .height(44)
-          .backgroundColor(this.getPalette().buttonPrimaryBackground)
-          .borderRadius(22)
-          .onClick(() => this.handleUpload())
-        
-        Button('Download')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(this.getPalette().buttonSecondaryText)
-          .width('42%')
-          .height(44)
-          .backgroundColor(this.getPalette().buttonSecondaryBackground)
-          .borderRadius(22)
-          .onClick(() => this.handleDownload())
-      }
-      .width('90%')
-      .justifyContent(FlexAlign.Center)
-      .margin({ bottom: 20 })
-
-      Button(this.isPolling ? 'Stop Auto-Sync' : 'Start Auto-Sync')
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.isPolling ? this.getPalette().buttonDangerText : this.getPalette().buttonPrimaryText)
-        .width('90%')
-        .height(48)
-        .backgroundColor(this.isPolling ? this.getPalette().buttonDangerBackground : this.getPalette().buttonPrimaryBackground)
-        .borderRadius(24)
-        .onClick(() => this.togglePolling())
-        .margin({ bottom: 20 })
-
-      Column() {
-        Text('Sync Status')
-          .fontSize(14)
-          .fontColor(this.getPalette().textSecondary)
-          .margin({ bottom: 5 })
-        
-        Text(this.syncStatus)
-          .fontSize(16)
-          .fontColor(this.syncStatus.includes('Error') ? this.getPalette().danger :
-                     this.syncStatus.includes('Success') ? this.getPalette().success : this.getPalette().textSecondary)
-      }
-      .width('90%')
-      .padding(16)
-      .backgroundColor(this.getPalette().pageSurface)
-      .borderRadius(16)
-      .shadow({ radius: 16, color: this.getPalette().shadowColor, offsetX: 0, offsetY: 6 })
-
-      Blank()
+      .width('100%')
+      .alignItems(HorizontalAlign.Center)
     }
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Center)
     .backgroundColor(this.getPalette().pageBackground)
   }
 }

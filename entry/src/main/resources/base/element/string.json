@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "SyncClipboard entry module"
+      "value": "ClipLink entry module"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Entry ability for SyncClipboard"
+      "value": "Entry ability for ClipLink"
     },
     {
       "name": "EntryAbility_label",
-      "value": "SyncClipboard"
+      "value": "ClipLink"
     },
     {
       "name": "internet_reason",
