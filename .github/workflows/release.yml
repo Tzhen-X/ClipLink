@@ -1,0 +1,114 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build HAP
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sanchuanhehe/harmony-next-pipeline-docker/harmonyos-ci-image:v5.0.4
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare build profile (unsigned CI config)
+        run: cp build-profile.ci.json5 build-profile.json5
+
+      - name: Install ohpm dependencies
+        run: ohpm install --all
+
+      - name: Build HAP
+        run: |
+          hvigorw clean --no-daemon
+          hvigorw assembleHap --mode module -p product=default -p buildMode=debug --no-daemon
+
+      - name: Locate HAP file
+        id: locate_hap
+        run: |
+          HAP_PATH=$(find entry/build -name "*.hap" | head -1)
+          echo "hap_path=$HAP_PATH" >> $GITHUB_OUTPUT
+          echo "Found HAP: $HAP_PATH"
+
+      - name: Upload HAP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: syncclipboard-harmony-hap
+          path: ${{ steps.locate_hap.outputs.hap_path }}
+          retention-days: 7
+
+  release:
+    name: Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download HAP artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: syncclipboard-harmony-hap
+          path: ./dist
+
+      - name: Rename HAP for release
+        id: rename
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          HAP_FILE=$(find ./dist -name "*.hap" | head -1)
+          NEW_NAME="syncclipboard-harmony-${TAG}.hap"
+          mv "$HAP_FILE" "./dist/$NEW_NAME"
+          echo "hap_name=$NEW_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SyncClipboard Harmony ${{ github.ref_name }}
+          body: |
+            ## SyncClipboard HarmonyOS ${{ github.ref_name }}
+
+            ### ⚠️ 安装说明 / Installation Notice
+
+            由于鸿蒙系统限制，此 HAP 包为**未签名包**，无法通过常规方式直接安装。请使用以下方式之一进行安装：
+
+            > Due to HarmonyOS restrictions, this HAP is **unsigned** and cannot be installed through normal means. Please use one of the following methods:
+
+            #### 方式一：使用 auto-installer 工具（推荐 / Recommended）
+
+            使用 [auto-installer](https://github.com/likuai2010/auto-installer) 工具可以方便地将未签名 HAP 安装到 HarmonyOS 设备。
+
+            1. 下载 [auto-installer](https://github.com/likuai2010/auto-installer/releases)
+            2. 连接 HarmonyOS 设备并开启开发者模式（Settings → About → Version → tap 7 times）
+            3. 使用 auto-installer 安装 `.hap` 文件
+
+            #### 方式二：通过 hdc 命令行 Sideload
+
+            ```bash
+            # 连接设备后执行
+            hdc install syncclipboard-harmony-${{ github.ref_name }}.hap
+            ```
+
+            需要在设备上启用 **USB 调试** 并安装 HarmonyOS SDK 中的 `hdc` 工具。
+
+            ---
+
+            ### 文件 / Files
+
+            | 文件 | 说明 |
+            |------|------|
+            | `syncclipboard-harmony-${{ github.ref_name }}.hap` | HarmonyOS 应用包（未签名） |
+
+          files: ./dist/${{ steps.rename.outputs.hap_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
