@@ -11,7 +11,7 @@ jobs:
     name: Build HAP
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/sanchuanhehe/harmony-next-pipeline-docker/harmonyos-ci-image:v5.0.4
+      image: ghcr.io/sanchuanhehe/harmony-next-pipeline-docker/harmonyos-ci-image:latest
 
     steps:
       - name: Checkout code
