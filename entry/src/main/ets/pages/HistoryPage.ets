@@ -13,11 +13,16 @@ interface HistoryViewItem extends HistoryRecordDto {
   previewPixelMap?: image.PixelMap;
 }
 
+const PAGE_SIZE = 30;
+const PREVIEW_CONCURRENCY = 3;
+
 @Component
 export default struct HistoryPage {
   @State historyList: HistoryViewItem[] = [];
   @State isLoading: boolean = false;
   @State isRefreshing: boolean = false;
+  @State isLoadingMore: boolean = false;
+  @State hasMore: boolean = true;
   @StorageLink('historyRefreshToken') @Watch('handleHistoryRefreshTokenChange')
   historyRefreshToken: number = 0;
   @StorageLink('appTheme') appTheme: string = 'auto';
@@ -27,6 +32,8 @@ export default struct HistoryPage {
 
   private storageService: HistoryStorageService = HistoryStorageService.getInstance();
   private readonly listStyle = getHistoryListStyleSpec();
+  private currentPage: number = 1;
+  private loadSeq: number = 0;
 
   private getPalette(): ThemePalette {
     return ThemeUtil.getPalette(
@@ -52,7 +59,7 @@ export default struct HistoryPage {
   }
 
   private handleHistoryRefreshTokenChange(): void {
-    void this.loadHistory();
+    void this.refresh();
   }
 
   private createSyncService(): SyncClipboardService {
@@ -66,48 +73,143 @@ export default struct HistoryPage {
 
   private async initializePage() {
     await ConfigService.getInstance().loadConfig();
-    await this.loadHistory();
+    await this.refresh();
   }
 
-  private async loadHistory() {
+  private async refresh(): Promise<void> {
+    if (this.isLoadingMore) {
+      return;
+    }
+    const seq = ++this.loadSeq;
     if (!this.isRefreshing) {
       this.isLoading = true;
     }
-    try {
-      const config = ConfigService.getInstance().getConfig();
-      // Load from local storage first
-      const localRecords = await this.storageService.queryRecords(config.maxHistorySize);
-      this.setHistoryRecords(localRecords);
-      void this.loadImagePreviews();
+    this.currentPage = 1;
+    this.hasMore = true;
 
-      // Sync from server
+    try {
       const syncService = this.createSyncService();
-      const serverRecords = await syncService.queryHistoryPages(config.maxHistorySize);
+
+      // 1. Local first for instant UI
+      const localRecords = await this.storageService.queryRecords(PAGE_SIZE, 0);
+      if (seq !== this.loadSeq) return;
+      this.setHistoryRecords(localRecords, false);
+      void this.loadImagePreviews(syncService, seq);
+
+      // 2. Server first page
+      const serverRecords = await syncService.queryHistoryPage(1);
+      if (seq !== this.loadSeq) return;
 
       for (const record of serverRecords) {
         await this.storageService.upsertRecord(record);
       }
+      if (seq !== this.loadSeq) return;
 
-      this.setHistoryRecords(await this.storageService.queryRecords(config.maxHistorySize));
-      void this.loadImagePreviews();
+      const merged = await this.storageService.queryRecords(PAGE_SIZE, 0);
+      if (seq !== this.loadSeq) return;
+      this.setHistoryRecords(merged, false);
+      this.hasMore = serverRecords.length >= PAGE_SIZE || merged.length >= PAGE_SIZE;
+      void this.loadImagePreviews(syncService, seq);
     } catch (error) {
-      console.error('[HistoryPage] loadHistory error:', JSON.stringify(error));
+      console.error('[HistoryPage] refresh error:', JSON.stringify(error));
     } finally {
-      this.isLoading = false;
-      this.isRefreshing = false;
+      if (seq === this.loadSeq) {
+        this.isLoading = false;
+        this.isRefreshing = false;
+      }
     }
   }
 
-  private setHistoryRecords(records: HistoryRecordDto[]): void {
+  private async loadMore(): Promise<void> {
+    if (this.isLoadingMore || this.isRefreshing || !this.hasMore) {
+      return;
+    }
+    this.isLoadingMore = true;
+    const seq = this.loadSeq;
+    const nextPage = this.currentPage + 1;
+
+    try {
+      const syncService = this.createSyncService();
+      const serverRecords = await syncService.queryHistoryPage(nextPage);
+      if (seq !== this.loadSeq) return;
+
+      if (serverRecords.length > 0) {
+        for (const record of serverRecords) {
+          await this.storageService.upsertRecord(record);
+        }
+      }
+      if (seq !== this.loadSeq) return;
+
+      const localPage = await this.storageService.queryRecords(
+        PAGE_SIZE,
+        this.historyList.length
+      );
+      if (seq !== this.loadSeq) return;
+
+      if (localPage.length === 0 && serverRecords.length === 0) {
+        this.hasMore = false;
+      } else {
+        this.appendHistoryRecords(localPage);
+        this.currentPage = nextPage;
+        if (serverRecords.length < PAGE_SIZE && localPage.length < PAGE_SIZE) {
+          this.hasMore = false;
+        }
+        void this.loadImagePreviews(syncService, seq);
+      }
+    } catch (error) {
+      console.error('[HistoryPage] loadMore error:', JSON.stringify(error));
+    } finally {
+      if (seq === this.loadSeq) {
+        this.isLoadingMore = false;
+      }
+    }
+  }
+
+  private setHistoryRecords(records: HistoryRecordDto[], append: boolean): void {
     const existing = new Map<string, image.PixelMap>();
+    const keepKeys = new Set<string>();
+    records.forEach((r: HistoryRecordDto): void => {
+      keepKeys.add(`${r.type}-${r.hash}`);
+    });
+
     this.historyList.forEach((item: HistoryViewItem): void => {
+      const key = `${item.type}-${item.hash}`;
       if (item.previewPixelMap) {
-        existing.set(`${item.type}-${item.hash}`, item.previewPixelMap);
+        if (keepKeys.has(key) || append) {
+          existing.set(key, item.previewPixelMap);
+        } else {
+          void item.previewPixelMap.release();
+        }
       }
     });
-    this.historyList = records.map((record: HistoryRecordDto) =>
+
+    const mapped: HistoryViewItem[] = records.map((record: HistoryRecordDto) =>
       this.createHistoryViewItem(record, existing.get(`${record.type}-${record.hash}`))
     );
+
+    if (append) {
+      const seen = new Set<string>();
+      this.historyList.forEach((item: HistoryViewItem): void => {
+        seen.add(`${item.type}-${item.hash}`);
+      });
+      const appended: HistoryViewItem[] = [];
+      mapped.forEach((item: HistoryViewItem): void => {
+        const key = `${item.type}-${item.hash}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          appended.push(item);
+        }
+      });
+      if (appended.length > 0) {
+        this.historyList = this.historyList.concat(appended);
+      }
+    } else {
+      this.historyList = mapped;
+    }
+  }
+
+  private appendHistoryRecords(records: HistoryRecordDto[]): void {
+    this.setHistoryRecords(records, true);
   }
 
   private createHistoryViewItem(
@@ -131,28 +233,56 @@ export default struct HistoryPage {
     };
   }
 
-  private async loadImagePreviews(): Promise<void> {
-    const syncService = this.createSyncService();
-    for (const item of this.historyList) {
-      if (item.type !== 'Image' || !item.hasData || item.previewPixelMap) {
-        continue;
-      }
-      try {
-        const buffer = await syncService.downloadHistoryBinary(`${item.type}-${item.hash}`);
-        const pixelMap = await ImageUtil.createPixelMapFromBuffer(buffer);
-        const nextItems: HistoryViewItem[] = [];
-        this.historyList.forEach((current: HistoryViewItem): void => {
-          if (current.type === item.type && current.hash === item.hash) {
-            nextItems.push(this.createHistoryViewItem(current, pixelMap));
-          } else {
-            nextItems.push(this.createHistoryViewItem(current, current.previewPixelMap));
+  private async loadImagePreviews(syncService: SyncClipboardService, seq: number): Promise<void> {
+    const pending: HistoryViewItem[] = this.historyList.filter((item: HistoryViewItem): boolean =>
+      item.type === 'Image' && !!item.hasData && !item.previewPixelMap
+    );
+    if (pending.length === 0) return;
+
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < pending.length) {
+        if (seq !== this.loadSeq) return;
+        const item = pending[cursor++];
+        try {
+          const buffer = await syncService.downloadHistoryBinary(`${item.type}-${item.hash}`);
+          if (seq !== this.loadSeq) return;
+          const pixelMap = await ImageUtil.createPixelMapFromBuffer(buffer);
+          if (seq !== this.loadSeq) {
+            void pixelMap.release();
+            return;
           }
-        });
-        this.historyList = nextItems;
-      } catch (error) {
-        console.error('[HistoryPage] loadImagePreviews error:', JSON.stringify(error));
+          this.applyPreview(item.type, item.hash, pixelMap);
+        } catch (error) {
+          console.error('[HistoryPage] loadImagePreviews error:', JSON.stringify(error));
+        }
       }
+    };
+
+    const workerCount = Math.min(PREVIEW_CONCURRENCY, pending.length);
+    const workers: Promise<void>[] = [];
+    for (let i = 0; i < workerCount; i++) {
+      workers.push(worker());
     }
+    await Promise.all(workers);
+  }
+
+  private applyPreview(type: string, hash: string, pixelMap: image.PixelMap): void {
+    const idx = this.historyList.findIndex((i: HistoryViewItem): boolean =>
+      i.type === type && i.hash === hash
+    );
+    if (idx < 0) {
+      void pixelMap.release();
+      return;
+    }
+    const current = this.historyList[idx];
+    if (current.previewPixelMap) {
+      void pixelMap.release();
+      return;
+    }
+    const next: HistoryViewItem[] = this.historyList.slice();
+    next[idx] = this.createHistoryViewItem(current, pixelMap);
+    this.historyList = next;
   }
 
   private releasePreviewImages(): void {
@@ -216,6 +346,29 @@ export default struct HistoryPage {
       return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
     } catch (error) {
       return dateStr;
+    }
+  }
+
+  @Builder
+  private FooterBuilder() {
+    if (this.isLoadingMore) {
+      Row() {
+        LoadingProgress().width(24).height(24)
+        Text('Loading more...')
+          .fontSize($r('sys.float.Caption_M'))
+          .fontColor(this.getPalette().textSecondary)
+          .margin({ left: 8 })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .padding({ top: 12, bottom: 12 })
+    } else if (!this.hasMore && this.historyList.length > 0) {
+      Text('No more items')
+        .fontSize($r('sys.float.Caption_M'))
+        .fontColor(this.getPalette().textSecondary)
+        .width('100%')
+        .textAlign(TextAlign.Center)
+        .padding({ top: 12, bottom: 12 })
     }
   }
 
@@ -319,15 +472,21 @@ export default struct HistoryPage {
               }
               .onClick(() => this.handleItemClick(item))
             }, (item: HistoryRecordDto) => `${item.type}-${item.hash}`)
+
+            ListItem() {
+              this.FooterBuilder()
+            }
           }
           .width('96%')
           .layoutWeight(1)
+          .onReachEnd(() => {
+            void this.loadMore();
+          })
         }
         .width('96%')
         .layoutWeight(1)
         .onRefreshing(() => {
-          this.isRefreshing = true;
-          void this.loadHistory();
+          void this.refresh();
         })
       }
 

@@ -45,6 +45,10 @@ export class SyncClipboardService {
     return await this.httpClient.postMultipart<HistoryRecordDto[]>('/api/history/query', fields);
   }
 
+  async queryHistoryPage(page: number): Promise<HistoryRecordDto[]> {
+    return await this.queryHistory({ page });
+  }
+
   async queryHistoryPages(limit: number): Promise<HistoryRecordDto[]> {
     const merged: HistoryRecordDto[] = [];
     const seen = new Set<string>();

@@ -128,13 +128,16 @@ export class HistoryStorageService {
   /**
    * Query history records
    */
-  async queryRecords(limit: number = 50): Promise<HistoryRecordDto[]> {
+  async queryRecords(limit: number = 50, offset: number = 0): Promise<HistoryRecordDto[]> {
     try {
       const store = await this.ensureStore();
       const predicates = new relationalStore.RdbPredicates(this.TABLE_NAME);
       predicates.equalTo('isDeleted', 0);
       predicates.orderByDesc('lastAccessed');
       predicates.limitAs(limit);
+      if (offset > 0) {
+        predicates.offsetAs(offset);
+      }
 
       const resultSet = await store.query(predicates);
       const records: HistoryRecordDto[] = [];
